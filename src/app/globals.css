@@ -52,8 +52,10 @@ body {
   background-size: 44px 44px;
 }
 
+/* A soft vignette: brightest at the top, edges dimmed to about half, never hidden
+   (the grid has to stay visible in the gaps around the panes). */
 .grid-fade {
-  background: radial-gradient(ellipse at 50% 0%, transparent 30%, var(--bg) 85%);
+  background: radial-gradient(ellipse 150% 110% at 50% 0%, transparent 55%, rgb(10 10 10 / 0.5) 100%);
 }
 
 /* Shared pane pieces, matching the mockup's .pane / .pane-h / .chip. */
