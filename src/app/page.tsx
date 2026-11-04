@@ -1,4 +1,5 @@
-// Replaced in Task 4 by the redirect to the last-used format.
+import { RootRedirect } from "@/components/RootRedirect";
+
 export default function Home() {
-  return null;
+  return <RootRedirect />;
 }
