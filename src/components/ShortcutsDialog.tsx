@@ -8,6 +8,7 @@ interface ShortcutsDialogProps {
 }
 
 const SHORTCUTS = [
+  { action: "Show keyboard shortcuts", keys: "?" },
   { action: "Copy output", keys: "⌘/Ctrl + Shift + C" },
   { action: "Collapse or expand the format menu", keys: "⌘/Ctrl + \\" },
   { action: "Leave expanded output", keys: "Esc" },

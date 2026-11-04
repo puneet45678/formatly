@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TopBar } from "@/components/TopBar";
 
@@ -7,6 +7,46 @@ describe("TopBar", () => {
   it("shows the product name", () => {
     render(<TopBar />);
     expect(screen.getByText("formatly")).toBeInTheDocument();
+  });
+
+  it("has a logo mark with braces, hidden from screen readers", () => {
+    render(<TopBar />);
+    const mark = screen.getByText("{ }");
+    expect(mark).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("uses a round icon button with a name pill for Shortcuts", () => {
+    render(<TopBar />);
+    const button = screen.getByRole("button", { name: "Shortcuts" });
+    expect(button.querySelector("svg")).not.toBeNull();
+    const pill = button.querySelector("[data-pill]")!;
+    expect(pill).toHaveTextContent("Shortcuts");
+    expect(pill).toHaveAttribute("aria-hidden", "true");
+  });
+
+  it("opens the shortcuts with the ? key", () => {
+    render(<TopBar />);
+    fireEvent.keyDown(document.body, { key: "?" });
+    expect(screen.getByText("Copy output")).toBeVisible();
+  });
+
+  it("does not hijack ? while typing", () => {
+    render(
+      <>
+        <TopBar />
+        <input aria-label="field" />
+        <div contentEditable aria-label="editor" />
+      </>,
+    );
+    fireEvent.keyDown(screen.getByLabelText("field"), { key: "?" });
+    fireEvent.keyDown(screen.getByLabelText("editor"), { key: "?" });
+    expect(screen.queryByText("Copy output")).not.toBeVisible();
+  });
+
+  it("lists the ? shortcut", async () => {
+    render(<TopBar />);
+    await userEvent.click(screen.getByRole("button", { name: "Shortcuts" }));
+    expect(screen.getByText("Show keyboard shortcuts")).toBeVisible();
   });
 
   it("opens the shortcuts dialog", async () => {
