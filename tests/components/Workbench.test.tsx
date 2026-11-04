@@ -60,6 +60,15 @@ describe("Workbench", () => {
     expect(inputPane().querySelector(".cm-error-line")).toHaveTextContent("c");
   });
 
+  it("announces status and errors to screen readers", async () => {
+    runFormatter.mockResolvedValue({ ok: false, error: { message: "Bad", line: 2 } });
+    renderWorkbench("json");
+    typeInput("a\nb");
+    const message = await within(outputPane()).findByText("Line 2: Bad");
+    expect(message.closest("[aria-live=polite]")).not.toBeNull();
+    expect(within(outputPane()).getByText("Error").closest("[aria-live=polite]")).not.toBeNull();
+  });
+
   it("shows line only when column is missing", async () => {
     runFormatter.mockResolvedValue({ ok: false, error: { message: "Bad", line: 3 } });
     renderWorkbench("json");

@@ -46,8 +46,9 @@ describe("useFormattedOutput", () => {
   });
 
   it("runs formatter once for a burst of changes", async () => {
-    const { rerender } = setup({ id: "json", input: "a" });
-    for (const input of ["ab", "abc"]) {
+    // Mount empty, then type: only the typing itself is debounced.
+    const { rerender } = setup({ id: "json", input: "" });
+    for (const input of ["a", "ab", "abc"]) {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(100);
       });
@@ -117,6 +118,15 @@ describe("useFormattedOutput", () => {
       await vi.advanceTimersByTimeAsync(0);
     });
     expect(result.current).toEqual({ status: "ok", output: "YAML OUT" });
+  });
+
+  it("formats right away when mounted with existing text", async () => {
+    // Switching routes remounts the page, so returning to a format mounts the hook fresh.
+    const { result } = setup({ id: "yaml", input: "a: 1" });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current).toEqual({ status: "ok", output: "a: 1" });
   });
 
   it("returns to empty when input is cleared after an error", async () => {

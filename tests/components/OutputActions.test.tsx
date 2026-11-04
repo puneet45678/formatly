@@ -90,6 +90,18 @@ describe("OutputActions", () => {
     expect(downloadBlob).toHaveBeenCalledWith("diagram.png", expect.any(Blob));
   });
 
+  it("shows PNG failed when the PNG export fails", async () => {
+    svgToPngBlob.mockRejectedValueOnce(new Error("tainted canvas"));
+    render(<OutputActions format={getFormat("mermaid")} state={{ status: "ok", output: "<svg/>" }} />);
+    await act(async () => fireEvent.click(button("Download PNG")));
+    expect(button("PNG failed")).toBeInTheDocument();
+    expect(downloadBlob).not.toHaveBeenCalled();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1500);
+    });
+    expect(button("Download PNG")).toBeInTheDocument();
+  });
+
   it("Cmd/Ctrl+Shift+C copies", async () => {
     render(<OutputActions format={getFormat("json")} state={ok} />);
     await act(async () => fireEvent.keyDown(window, { key: "C", metaKey: true, shiftKey: true }));

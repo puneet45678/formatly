@@ -7,7 +7,8 @@ export function downloadBlob(filename: string, blob: Blob): void {
   document.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  // Revoking in the same tick can cancel the download in Safari.
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 export function downloadText(filename: string, text: string, mime: string): void {

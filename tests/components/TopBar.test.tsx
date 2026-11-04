@@ -17,6 +17,13 @@ describe("TopBar", () => {
     expect(screen.getByText(/Shift \+ C/)).toBeVisible();
   });
 
+  it("explains how to leave the editor with the keyboard", async () => {
+    render(<TopBar />);
+    await userEvent.click(screen.getByRole("button", { name: "Shortcuts" }));
+    expect(screen.getByText("Leave the editor")).toBeVisible();
+    expect(screen.getByText("Esc, then Tab")).toBeVisible();
+  });
+
   it("closes the shortcuts dialog", async () => {
     render(<TopBar />);
     await userEvent.click(screen.getByRole("button", { name: "Shortcuts" }));

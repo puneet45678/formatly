@@ -24,7 +24,9 @@ export function useFormattedOutput(id: FormatId, input: string, options?: Format
   // never shows the old format's output in the new pane.
   const [state, setState] = useState<{ id: FormatId; value: OutputState }>({ id, value: EMPTY });
   const latestRequest = useRef(0);
-  const lastFormat = useRef(id);
+  // null until the first run. Switching routes remounts the page, so a
+  // fresh mount means the user just opened (or came back to) this format.
+  const lastFormat = useRef<FormatId | null>(null);
   const sqlDialect = options?.sqlDialect;
 
   useEffect(() => {
@@ -40,7 +42,7 @@ export function useFormattedOutput(id: FormatId, input: string, options?: Format
       return () => clearTimeout(timer);
     }
 
-    // Typing waits for a pause; switching format formats right away.
+    // Typing waits for a pause; opening or switching format formats right away.
     const delay = formatChanged ? 0 : FORMAT_DEBOUNCE_MS;
     const timer = setTimeout(async () => {
       let next: OutputState;

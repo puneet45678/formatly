@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import CodeMirror, { type Extension } from "@uiw/react-codemirror";
-import { Decoration, EditorView } from "@codemirror/view";
+import { Decoration, EditorView, type ViewUpdate } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
 import { json } from "@codemirror/lang-json";
@@ -14,7 +14,7 @@ import type { FormatId } from "@/formats/types";
 
 interface CodeEditorProps {
   value: string;
-  onChange?: (value: string) => void;
+  onChange?: (value: string, update: ViewUpdate) => void;
   formatId: FormatId;
   readOnly?: boolean;
   /** 1-based line to highlight as the error location. */
@@ -43,7 +43,7 @@ const highlight = HighlightStyle.define([
 const theme = EditorView.theme(
   {
     "&": { height: "100%", backgroundColor: "transparent", color: "#cfcfcf", fontSize: "12px" },
-    "&.cm-focused": { outline: "none" },
+    "&.cm-focused": { outline: "1px solid #3f3f3f", outlineOffset: "-1px" },
     ".cm-scroller": { fontFamily: "var(--font-jetbrains-mono), monospace", lineHeight: "1.65" },
     ".cm-content": { padding: "12px 0", caretColor: "#ededed" },
     ".cm-gutters": { backgroundColor: "transparent", border: "none", color: "#3f3f3f" },
@@ -54,6 +54,17 @@ const theme = EditorView.theme(
   },
   { dark: true },
 );
+
+// Kept at module level: the CodeMirror wrapper rebuilds the whole editor
+// setup whenever this object (or onChange) changes identity.
+const basicSetup = {
+  lineNumbers: true,
+  foldGutter: false,
+  highlightActiveLine: false,
+  highlightActiveLineGutter: false,
+  autocompletion: false,
+  searchKeymap: true,
+};
 
 function errorLineExtension(line: number): Extension {
   return EditorView.decorations.of((view) => {
@@ -74,10 +85,21 @@ export function CodeEditor({ value, onChange, formatId, readOnly, errorLine, ari
     [formatId, errorLine, ariaLabel],
   );
 
+  // Hand CodeMirror one stable callback that always calls the latest onChange,
+  // so a parent re-render (a new closure each time) doesn't rebuild the editor.
+  const latestOnChange = useRef(onChange);
+  useEffect(() => {
+    latestOnChange.current = onChange;
+  });
+  const stableOnChange = useCallback(
+    (text: string, update: ViewUpdate) => latestOnChange.current?.(text, update),
+    [],
+  );
+
   return (
     <CodeMirror
       value={value}
-      onChange={onChange}
+      onChange={onChange ? stableOnChange : undefined}
       extensions={extensions}
       theme={theme}
       readOnly={readOnly}
@@ -85,14 +107,7 @@ export function CodeEditor({ value, onChange, formatId, readOnly, errorLine, ari
       placeholder={placeholder}
       height="100%"
       className="min-h-0 flex-1 overflow-hidden"
-      basicSetup={{
-        lineNumbers: true,
-        foldGutter: false,
-        highlightActiveLine: false,
-        highlightActiveLineGutter: false,
-        autocompletion: false,
-        searchKeymap: true,
-      }}
+      basicSetup={basicSetup}
     />
   );
 }

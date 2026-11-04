@@ -22,8 +22,10 @@ export function OutputPane({ format, state }: OutputPaneProps) {
       <div className="pane-header">
         <b className="font-medium text-text">Output</b>
         <div className="flex items-center gap-2">
-          {state.status === "ok" && <span className="status status-ok">Valid</span>}
-          {state.status === "error" && <span className="status status-error">Error</span>}
+          <span aria-live="polite">
+            {state.status === "ok" && <span className="status status-ok">Valid</span>}
+            {state.status === "error" && <span className="status status-error">Error</span>}
+          </span>
           <OutputActions format={format} state={state} />
         </div>
       </div>
@@ -37,7 +39,11 @@ function OutputBody({ format, state }: OutputPaneProps) {
     case "empty":
       return <p className="p-3.5 text-[12.5px] text-dim">Paste {format.label} on the left</p>;
     case "error":
-      return <p className="p-3.5 font-mono text-xs text-err">{describeError(state.error)}</p>;
+      return (
+        <p aria-live="polite" className="p-3.5 font-mono text-xs text-err">
+          {describeError(state.error)}
+        </p>
+      );
     case "ok":
       return format.outputKind === "diagram" ? (
         <DiagramView svg={state.output} />

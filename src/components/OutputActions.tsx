@@ -8,24 +8,39 @@ import { copyText } from "@/lib/clipboard";
 import { downloadBlob, downloadText, svgToPngBlob } from "@/lib/download";
 
 type CopyLabel = "Copy" | "Copied" | "Copy failed";
+type PngLabel = "Download PNG" | "PNG failed";
 
 const FEEDBACK_MS = 1500;
+
+/** A button label that shows feedback briefly, then returns to its default. */
+function useFeedbackLabel<T extends string>(initial: T) {
+  const [label, setLabel] = useState<T>(initial);
+  useEffect(() => {
+    if (label === initial) return;
+    const timer = setTimeout(() => setLabel(initial), FEEDBACK_MS);
+    return () => clearTimeout(timer);
+  }, [label, initial]);
+  return [label, setLabel] as const;
+}
 
 export function OutputActions({ format, state }: { format: FormatMeta; state: OutputState }) {
   const output = state.status === "ok" ? state.output : null;
   const isDiagram = format.outputKind === "diagram";
-  const [copyLabel, setCopyLabel] = useState<CopyLabel>("Copy");
-
-  // Put the Copy label back after a moment.
-  useEffect(() => {
-    if (copyLabel === "Copy") return;
-    const timer = setTimeout(() => setCopyLabel("Copy"), FEEDBACK_MS);
-    return () => clearTimeout(timer);
-  }, [copyLabel]);
+  const [copyLabel, setCopyLabel] = useFeedbackLabel<CopyLabel>("Copy");
+  const [pngLabel, setPngLabel] = useFeedbackLabel<PngLabel>("Download PNG");
 
   async function copy() {
     if (output === null) return;
     setCopyLabel((await copyText(output)) ? "Copied" : "Copy failed");
+  }
+
+  async function downloadPng() {
+    if (output === null) return;
+    try {
+      downloadBlob("diagram.png", await svgToPngBlob(output));
+    } catch {
+      setPngLabel("PNG failed");
+    }
   }
 
   useCopyShortcut(copy, output !== null && !isDiagram);
@@ -41,13 +56,8 @@ export function OutputActions({ format, state }: { format: FormatMeta; state: Ou
         >
           Download SVG
         </button>
-        <button
-          type="button"
-          className="chip"
-          disabled={output === null}
-          onClick={async () => output !== null && downloadBlob("diagram.png", await svgToPngBlob(output))}
-        >
-          Download PNG
+        <button type="button" className="chip" disabled={output === null} onClick={downloadPng} aria-live="polite">
+          {pngLabel}
         </button>
       </>
     );

@@ -7,7 +7,11 @@ interface ShortcutsDialogProps {
   onClose: () => void;
 }
 
-const SHORTCUTS = [{ action: "Copy output", keys: "⌘/Ctrl + Shift + C" }];
+const SHORTCUTS = [
+  { action: "Copy output", keys: "⌘/Ctrl + Shift + C" },
+  // Tab indents inside the editor, so leaving it takes Esc first.
+  { action: "Leave the editor", keys: "Esc, then Tab" },
+];
 
 export function ShortcutsDialog({ open, onClose }: ShortcutsDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
