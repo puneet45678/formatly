@@ -4,6 +4,7 @@ import type { FormatError, FormatMeta } from "@/formats/types";
 import type { OutputState } from "@/hooks/useFormattedOutput";
 import { CodeEditor } from "./CodeEditor";
 import { DiagramView } from "./DiagramView";
+import { OutputActions } from "./OutputActions";
 
 interface OutputPaneProps {
   format: FormatMeta;
@@ -23,6 +24,7 @@ export function OutputPane({ format, state }: OutputPaneProps) {
         <div className="flex items-center gap-2">
           {state.status === "ok" && <span className="status status-ok">Valid</span>}
           {state.status === "error" && <span className="status status-error">Error</span>}
+          <OutputActions format={format} state={state} />
         </div>
       </div>
       <OutputBody format={format} state={state} />
