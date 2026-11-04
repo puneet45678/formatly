@@ -29,13 +29,27 @@ const OUTPUT_VIEWS: { id: OutputView; label: string }[] = [
 
 type Preview = ComponentType<{ source: string }>;
 
+/** The formatted output as text, in a read-only editor. */
+function SourceView({ format, source }: { format: RegisteredFormat; source: string }) {
+  return <CodeEditor value={source} formatId={format.id} readOnly ariaLabel={`Formatted ${format.label}`} />;
+}
+
 // One React.lazy component per format that has a preview, made once here
 // (never during render, which would remount it every time). Creating it
 // downloads nothing: the preview's code loads the first time it is shown.
 const LAZY_PREVIEWS: Partial<Record<FormatId, LazyExoticComponent<Preview>>> = {};
-for (const { id } of FORMATS) {
-  const loadPreview = FORMAT_UI[id].preview;
-  if (loadPreview) LAZY_PREVIEWS[id] = lazy(() => loadPreview().then((component) => ({ default: component })));
+for (const format of FORMATS) {
+  const loadPreview = FORMAT_UI[format.id].preview;
+  if (!loadPreview) continue;
+  // If the preview's code can't be downloaded (offline, or the site was updated
+  // while this tab was open), show the source instead. Without this the error
+  // would reach React with no error boundary and blank the whole page.
+  const showSource: Preview = ({ source }) => <SourceView format={format} source={source} />;
+  LAZY_PREVIEWS[format.id] = lazy(() =>
+    loadPreview()
+      .catch(() => showSource)
+      .then((component) => ({ default: component })),
+  );
 }
 
 export function describeError(error: FormatError): string {
@@ -109,9 +123,7 @@ function OutputBody({ format, state, view }: OutputPaneProps & { view: OutputVie
       );
     case "ok": {
       if (format.output === "diagram") return <DiagramView svg={state.output} />;
-      const source = (
-        <CodeEditor value={state.output} formatId={format.id} readOnly ariaLabel={`Formatted ${format.label}`} />
-      );
+      const source = <SourceView format={format} source={state.output} />;
       const Preview = LAZY_PREVIEWS[format.id];
       if (!Preview || view === "source") return source;
       // While the preview's code downloads, show the source instead of a blank pane.

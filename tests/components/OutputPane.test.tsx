@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { getFormat } from "@/formats/registry";
 import { OutputPane } from "@/components/OutputPane";
 
@@ -38,5 +38,35 @@ describe("OutputPane", () => {
     expect(onToggleExpand).toHaveBeenCalledTimes(1);
     rerender(<OutputPane format={getFormat("json")} state={{ status: "empty" }} expanded onToggleExpand={onToggleExpand} />);
     expect(screen.getByRole("button", { name: "Exit expanded output" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("shows the source when the preview's code fails to load", async () => {
+    // e.g. offline, or the site was updated while this tab was open.
+    // OutputPane sets up its previews when the module loads, so load a fresh
+    // copy with Markdown's preview loader mocked to fail.
+    let fail!: () => void;
+    const loading = new Promise<never>((_, reject) => (fail = () => reject(new Error("chunk failed"))));
+    vi.resetModules();
+    vi.doMock("@/components/format-ui", async (importOriginal) => {
+      const { FORMAT_UI } = await importOriginal<typeof import("@/components/format-ui")>();
+      return {
+        FORMAT_UI: {
+          ...FORMAT_UI,
+          markdown: { ...FORMAT_UI.markdown, preview: () => loading },
+        },
+      };
+    });
+    const { OutputPane: FreshOutputPane } = await import("@/components/OutputPane");
+    const { getFormat: freshGetFormat } = await import("@/formats/registry");
+
+    const { container } = render(<FreshOutputPane format={freshGetFormat("markdown")} state={markdownOk} />);
+    await act(async () => {
+      fail();
+      await loading.catch(() => {});
+      await new Promise((resolve) => setTimeout(resolve, 0)); // let React handle the failure
+    });
+    expect(container.querySelector(".cm-content")).toHaveTextContent("# Title");
+    expect(screen.queryByRole("heading", { name: "Title" })).toBeNull();
+    vi.doUnmock("@/components/format-ui");
   });
 });
