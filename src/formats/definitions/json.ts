@@ -13,5 +13,5 @@ export const json = {
     valid: '{"name":"Asha","roles":["admin","dev"],"active":true}',
     invalid: '{"a": 1,}',
   },
-  load: () => import("../formatters/echo").then((m) => m.echo),
+  load: () => import("../formatters/json").then((m) => m.formatJson),
 } as const satisfies FormatDefinition;
