@@ -26,8 +26,10 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const [sqlDialect, setSqlDialectState] = useState<SqlDialect>("sql");
 
   // Read after mount so the first render matches the static HTML.
+  // (Reading during render would make the server and browser HTML differ.)
   useEffect(() => {
     const stored = readStored(STORAGE_KEYS.sqlDialect);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from browser storage after hydration
     if (isSqlDialect(stored)) setSqlDialectState(stored);
   }, []);
 
