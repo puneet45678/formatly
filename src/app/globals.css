@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+/* Design tokens, copied from docs/superpowers/specs/layout-b-mockup.html */
+:root {
+  --bg: #0a0a0a;
+  --page: #050505;
+  --pane: rgba(17, 17, 17, 0.85);
+  --line: #232323;
+  --line2: #1a1a1a;
+  --text: #ededed;
+  --muted: #8f8f8f;
+  --dim: #5c5c5c;
+  --k: #7dd3fc;
+  --s: #a7f3d0;
+  --n: #fcd34d;
+  --p: #6b7280;
+  --ok: #4ade80;
+  --err: #f87171;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-page: var(--page);
+  --color-pane: var(--pane);
+  --color-line: var(--line);
+  --color-line2: var(--line2);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-dim: var(--dim);
+  --color-k: var(--k);
+  --color-ok: var(--ok);
+  --color-err: var(--err);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Background grid (see components/ui/kinetic-grid.tsx). The CSS lines show
+   until the canvas draws over them; the fade sits on top of both. */
+.grid-lines {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+/* A soft vignette: brightest at the top, edges dimmed to about half, never hidden
+   (the grid has to stay visible in the gaps around the panes). */
+.grid-fade {
+  background: radial-gradient(ellipse 150% 110% at 50% 0%, transparent 55%, rgb(10 10 10 / 0.5) 100%);
+}
+
+/* Shared pane pieces, matching the mockup's .pane / .pane-h / .chip. */
+@layer components {
+  .pane {
+    @apply flex min-h-[50dvh] min-w-0 flex-col overflow-hidden rounded-[10px] border border-line bg-pane backdrop-blur-sm md:min-h-0;
+  }
+  .pane-header {
+    @apply flex shrink-0 items-center justify-between gap-2 border-b border-line px-3 py-[9px] text-[11.5px] text-muted;
+  }
+  .chip {
+    @apply rounded-md border border-line px-2 py-[3px] text-[11px] text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted;
+  }
+  .zoom-btn {
+    @apply flex h-6 min-w-6 items-center justify-center rounded-md px-1 hover:bg-[#1c1c1c] hover:text-text;
+  }
+  .status {
+    @apply flex items-center gap-1.5 text-[11px] before:size-1.5 before:rounded-full before:content-[''];
+  }
+  .status-ok {
+    @apply text-ok before:bg-ok;
+  }
+  .status-error {
+    @apply text-err before:bg-err;
+  }
+}
+
+/* Rendered Markdown in the output pane. */
+.md-preview {
+  max-width: 72ch;
+  margin: 0 auto;
+  padding: 20px 24px 40px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #d4d4d4;
+}
+.md-preview > :first-child {
+  margin-top: 0;
+}
+.md-preview :where(h1, h2, h3, h4) {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.6em 0 0.6em;
+}
+.md-preview h1 {
+  font-size: 1.75em;
+  letter-spacing: -0.01em;
+}
+.md-preview h2 {
+  font-size: 1.35em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--line);
+}
+.md-preview h3 {
+  font-size: 1.1em;
+}
+.md-preview :where(p, ul, ol, blockquote, pre, table) {
+  margin: 0 0 1em;
+}
+.md-preview :where(ul, ol) {
+  padding-left: 1.4em;
+}
+.md-preview ul {
+  list-style: disc;
+}
+.md-preview ol {
+  list-style: decimal;
+}
+.md-preview li + li {
+  margin-top: 0.25em;
+}
+.md-preview li:has(> input[type="checkbox"]) {
+  list-style: none;
+  margin-left: -1.4em;
+}
+.md-preview a {
+  color: var(--k);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md-preview strong {
+  color: var(--text);
+}
+.md-preview blockquote {
+  border-left: 2px solid var(--line);
+  padding-left: 1em;
+  color: var(--muted);
+}
+.md-preview :not(pre) > code {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.85em;
+  background: #1c1c1c;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 0.1em 0.35em;
+}
+.md-preview pre {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  background: #0d0d0d;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+.md-preview table {
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+.md-preview :where(th, td) {
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+}
+.md-preview th {
+  background: #141414;
+  color: var(--text);
+  font-weight: 600;
+}
+.md-preview hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 2em 0;
+}
+.md-preview img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+.md-image-blocked {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+/* Blinking block cursor for the top-bar typewriter. */
+.caret-blink {
+  animation: caret-blink 1s steps(1) infinite;
+}
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .caret-blink {
+    animation: none;
+  }
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
