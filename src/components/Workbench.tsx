@@ -33,11 +33,14 @@ export function Workbench({ formatId }: { formatId: FormatId }) {
   }, [outputExpanded]);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col md:flex-row">
+    <div className="relative flex min-h-0 flex-1 flex-col">
+      {/* Floats over the grid; the panes leave room for it (left on desktop, bottom on phones). */}
       <FormatRail activeId={formatId} collapsed={railCollapsed} onToggle={toggleRail} />
       <main
         className={cn(
-          "grid min-h-0 flex-1 grid-cols-1 gap-3.5 overflow-y-auto p-3 md:overflow-hidden md:p-[18px]",
+          "grid min-h-0 flex-1 grid-cols-1 gap-3.5 overflow-y-auto p-3 pb-[76px] md:overflow-hidden md:p-[18px]",
+          "md:transition-[padding] md:duration-200 md:ease-out motion-reduce:transition-none",
+          railCollapsed ? "md:pl-[84px]" : "md:pl-[196px]",
           !outputExpanded && "md:grid-cols-2",
         )}
       >

@@ -11,7 +11,7 @@ interface WorkbenchState {
   setInput: (id: FormatId, text: string) => void;
   sqlDialect: SqlDialect;
   setSqlDialect: (dialect: SqlDialect) => void;
-  /** Format menu shrunk to a strip of format symbols (desktop only). */
+  /** Format capsule closed to symbols only (desktop; phones always show symbols). */
   railCollapsed: boolean;
   toggleRail: () => void;
 }
@@ -27,7 +27,8 @@ function isSqlDialect(value: unknown): value is SqlDialect {
 export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const [inputs, setInputs] = useState(emptyInputs);
   const [sqlDialect, setSqlDialectState] = useState<SqlDialect>("sql");
-  const [railCollapsed, setRailCollapsed] = useState(false);
+  // The format capsule starts closed (symbols only) until the user opens it.
+  const [railCollapsed, setRailCollapsed] = useState(true);
 
   // Read after mount so the first render matches the static HTML.
   // (Reading during render would make the server and browser HTML differ.)
@@ -35,7 +36,7 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     const storedDialect = readStored(STORAGE_KEYS.sqlDialect);
     /* eslint-disable react-hooks/set-state-in-effect -- one-time sync from browser storage after hydration */
     if (isSqlDialect(storedDialect)) setSqlDialectState(storedDialect);
-    if (readStored(STORAGE_KEYS.railCollapsed) === "true") setRailCollapsed(true);
+    if (readStored(STORAGE_KEYS.railCollapsed) === "false") setRailCollapsed(false);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 

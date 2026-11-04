@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Morphing format capsule</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#050505;color:#ededed;font-family:Inter,system-ui,sans-serif;padding:32px 20px 60px}
+  .page{max-width:1100px;margin:0 auto}
+  h1{font-size:22px;font-weight:600}
+  .intro{color:#8f8f8f;font-size:14px;margin-top:6px;line-height:1.55}
+  .intro kbd{font:500 12px 'JetBrains Mono';background:#1c1c1c;border:1px solid #333;border-radius:5px;padding:1px 5px;color:#ededed}
+
+  .app{position:relative;margin-top:24px;height:480px;border:1px solid #232323;border-radius:14px;overflow:hidden;background:#0a0a0a;
+    background-image:linear-gradient(to right,rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.055) 1px,transparent 1px);background-size:44px 44px}
+  .app::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,transparent 30%,#0a0a0a 85%)}
+  .app>*{position:relative;z-index:1}
+  .nav{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;border-bottom:1px solid #1a1a1a;font-size:14px;font-weight:600}
+  .nav i{display:inline-block;width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#fff,#777);vertical-align:-4px;margin-right:8px}
+  .nav span{color:#8f8f8f;font-size:12.5px;font-weight:400}
+  .work{position:absolute;top:49px;bottom:0;left:0;right:0}
+
+  .panes{position:absolute;top:18px;bottom:18px;right:18px;left:84px;display:grid;grid-template-columns:1fr 1fr;gap:14px;transition:left .22s cubic-bezier(.2,.8,.2,1)}
+  .open .panes{left:196px}
+  .pane{background:rgba(17,17,17,.85);border:1px solid #232323;border-radius:10px;overflow:hidden}
+  .ph{padding:9px 12px;border-bottom:1px solid #232323;font-size:11.5px}
+  .code{font:12px/1.65 'JetBrains Mono',monospace;padding:12px 14px;color:#7dd3fc;white-space:pre}
+  .code s{text-decoration:none;color:#a7f3d0} .code u{text-decoration:none;color:#fcd34d}
+
+  /* the capsule */
+  .dock{position:absolute;left:16px;top:50%;transform:translateY(-50%);z-index:5;width:50px;padding:6px;border-radius:25px;
+    background:rgba(17,17,17,.9);border:1px solid #262626;backdrop-filter:blur(8px);box-shadow:0 16px 40px -14px rgba(0,0,0,.85);
+    display:flex;flex-direction:column;gap:3px;transition:width .22s cubic-bezier(.2,.8,.2,1),border-radius .22s}
+  .open .dock{width:164px;border-radius:22px}
+  .toggle{height:30px;display:flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;color:#5c5c5c;cursor:pointer;border:0;background:none;font:inherit}
+  .open .toggle{justify-content:space-between;padding:0 6px 0 12px}
+  .toggle .lbl{display:none;font-size:10px;letter-spacing:.08em;text-transform:uppercase}
+  .open .toggle .lbl{display:inline}
+  .toggle:hover{color:#ededed}
+  .toggle svg{width:15px;height:15px}
+  .sep{height:1px;background:#232323;margin:2px 6px 3px}
+
+  .item{position:relative;height:38px;display:flex;align-items:center;gap:10px;padding:0 10px 0 0;border-radius:999px;color:#8f8f8f;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background .15s,color .15s}
+  .item .g{flex:0 0 38px;text-align:center;font:500 11px 'JetBrains Mono',monospace}
+  .item .name{font-size:12.5px;opacity:0;transition:opacity .12s}
+  .open .item .name{opacity:1;transition-delay:.08s}
+  .item:hover{background:#1c1c1c;color:#ededed}
+  .item.on{background:#ededed;color:#0a0a0a}
+  .item.on .name{font-weight:600}
+  .item .pill{position:absolute;left:calc(100% + 14px);top:50%;transform:translate(-4px,-50%);opacity:0;pointer-events:none;
+    font:700 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;background:#ededed;color:#0a0a0a;padding:5px 9px;border-radius:7px;transition:opacity .14s,transform .14s}
+  .dock:not(.x) .item:hover .pill{opacity:1;transform:translate(0,-50%)}
+  .open .item .pill{display:none}
+  @media (prefers-reduced-motion:reduce){.dock,.panes,.item,.item .name,.item .pill{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Morphing format capsule</h1>
+  <p class="intro">Click the top button of the capsule (or press <kbd>⌘\</kbd> / <kbd>Ctrl \</kbd>) to open and close it. Closed: symbols only, hover for the name pill. Open: the same capsule widens to show names; the panes slide over to make room instead of being covered.</p>
+
+  <div class="app" id="app">
+    <div class="nav"><div><i></i>formatly</div><span>Shortcuts</span></div>
+    <div class="work">
+      <nav class="dock" aria-label="Formats">
+        <button class="toggle" id="toggle" aria-label="Show format names" aria-expanded="false">
+          <span class="lbl">Formats</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path id="chev" d="m14 9 3 3-3 3"/></svg>
+        </button>
+        <div class="sep"></div>
+        <a class="item on" href="#"><span class="g">{ }</span><span class="name">JSON</span><span class="pill">JSON</span></a>
+        <a class="item" href="#"><span class="g">---</span><span class="name">YAML</span><span class="pill">YAML</span></a>
+        <a class="item" href="#"><span class="g">-&gt;</span><span class="name">Mermaid</span><span class="pill">Mermaid</span></a>
+        <a class="item" href="#"><span class="g">&lt;/&gt;</span><span class="name">XML</span><span class="pill">XML</span></a>
+        <a class="item" href="#"><span class="g">SQL</span><span class="name">SQL</span><span class="pill">SQL</span></a>
+        <a class="item" href="#"><span class="g">#</span><span class="name">Markdown</span><span class="pill">Markdown</span></a>
+      </nav>
+      <div class="panes">
+        <div class="pane"><div class="ph">Input · JSON</div><div class="code">{"user":{"id":<u>42</u>,"name":<s>"Asha"</s>}}</div></div>
+        <div class="pane"><div class="ph">Output</div><div class="code">{
+  "user": {
+    "id": <u>42</u>,
+    "name": <s>"Asha"</s>
+  }
+}</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const app = document.getElementById('app'), toggle = document.getElementById('toggle'), chev = document.getElementById('chev');
+  function flip() {
+    const open = app.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open);
+    toggle.setAttribute('aria-label', open ? 'Hide format names' : 'Show format names');
+    chev.setAttribute('d', open ? 'm16 15-3-3 3-3' : 'm14 9 3 3-3 3');
+  }
+  toggle.addEventListener('click', flip);
+  addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === '\\') { e.preventDefault(); flip(); } });
+  document.querySelectorAll('.item').forEach(a => a.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.item').forEach(x => x.classList.remove('on'));
+    a.classList.add('on');
+    document.querySelector('.ph').textContent = 'Input · ' + a.querySelector('.name').textContent;
+  }));
+</script>
+</body>
+</html>

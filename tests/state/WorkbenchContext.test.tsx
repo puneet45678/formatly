@@ -54,45 +54,45 @@ describe("WorkbenchContext", () => {
     }
   });
 
-  it("starts with the format menu expanded", () => {
+  it("starts with the format capsule closed (symbols only)", () => {
     const { result } = renderWorkbench();
-    expect(result.current.railCollapsed).toBe(false);
+    expect(result.current.railCollapsed).toBe(true);
   });
 
-  it("toggles the format menu and remembers it", () => {
+  it("opens and closes the format capsule and remembers it", () => {
     const { result } = renderWorkbench();
-    act(() => result.current.toggleRail());
-    expect(result.current.railCollapsed).toBe(true);
-    expect(localStorage.getItem("formatly:railCollapsed")).toBe("true");
     act(() => result.current.toggleRail());
     expect(result.current.railCollapsed).toBe(false);
     expect(localStorage.getItem("formatly:railCollapsed")).toBe("false");
-  });
-
-  it("restores a collapsed format menu", () => {
-    localStorage.setItem("formatly:railCollapsed", "true");
-    const { result } = renderWorkbench();
+    act(() => result.current.toggleRail());
     expect(result.current.railCollapsed).toBe(true);
+    expect(localStorage.getItem("formatly:railCollapsed")).toBe("true");
   });
 
-  it("ignores a garbage stored menu state", () => {
+  it("restores an open format capsule", () => {
+    localStorage.setItem("formatly:railCollapsed", "false");
+    const { result } = renderWorkbench();
+    expect(result.current.railCollapsed).toBe(false);
+  });
+
+  it("ignores a garbage stored capsule state", () => {
     localStorage.setItem("formatly:railCollapsed", "yes please");
     const { result } = renderWorkbench();
-    expect(result.current.railCollapsed).toBe(false);
+    expect(result.current.railCollapsed).toBe(true);
   });
 
-  it("toggles the format menu with Cmd/Ctrl+\\", () => {
+  it("toggles the format capsule with Cmd/Ctrl+\\", () => {
     const { result } = renderWorkbench();
     act(() => void fireEvent.keyDown(window, { key: "\\", metaKey: true }));
-    expect(result.current.railCollapsed).toBe(true);
-    act(() => void fireEvent.keyDown(window, { key: "\\", ctrlKey: true }));
     expect(result.current.railCollapsed).toBe(false);
+    act(() => void fireEvent.keyDown(window, { key: "\\", ctrlKey: true }));
+    expect(result.current.railCollapsed).toBe(true);
   });
 
   it("ignores a plain backslash", () => {
     const { result } = renderWorkbench();
     act(() => void fireEvent.keyDown(window, { key: "\\" }));
-    expect(result.current.railCollapsed).toBe(false);
+    expect(result.current.railCollapsed).toBe(true);
   });
 
   it("rememberFormat stores the last format", () => {

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Format dock options</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#050505;color:#ededed;font-family:Inter,system-ui,sans-serif;padding:32px 20px 80px}
+  .page{max-width:1100px;margin:0 auto}
+  h1{font-size:22px;font-weight:600}
+  .intro{color:#8f8f8f;font-size:14px;margin-top:6px;line-height:1.55}
+  .block{margin-top:40px}
+  .bh{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .tag{font:600 12px Inter;background:#1f1f1f;border:1px solid #333;border-radius:6px;padding:2px 8px}
+  .bh h2{font-size:15px;font-weight:600}
+  .bh span{color:#8f8f8f;font-size:13px}
+
+  /* app frame */
+  .app{position:relative;height:430px;border:1px solid #232323;border-radius:14px;overflow:hidden;background:#0a0a0a;
+    background-image:linear-gradient(to right,rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.055) 1px,transparent 1px);background-size:44px 44px}
+  .app::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,transparent 30%,#0a0a0a 85%)}
+  .app>*{position:relative;z-index:1}
+  .nav{display:flex;justify-content:space-between;align-items:center;padding:14px 22px;border-bottom:1px solid #1a1a1a;font-size:14px;font-weight:600}
+  .nav i{display:inline-block;width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#fff,#777);vertical-align:-4px;margin-right:8px}
+  .nav span{color:#8f8f8f;font-size:12.5px;font-weight:400}
+  .work{position:absolute;top:49px;bottom:0;left:0;right:0}
+  .panes{position:absolute;top:18px;bottom:18px;right:18px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .pane{background:rgba(17,17,17,.85);border:1px solid #232323;border-radius:10px;overflow:hidden}
+  .ph{padding:9px 12px;border-bottom:1px solid #232323;font-size:11.5px;color:#ededed}
+  .code{font:12px/1.65 'JetBrains Mono',monospace;padding:12px 14px;color:#7dd3fc;white-space:pre}
+  .code s{text-decoration:none;color:#a7f3d0} .code u{text-decoration:none;color:#fcd34d}
+
+  /* shared dock pieces */
+  .dock{position:absolute;left:16px;top:50%;transform:translateY(-50%);z-index:5}
+  .item{position:relative;display:flex;align-items:center;justify-content:center;font:500 11px 'JetBrains Mono',monospace;color:#8f8f8f;cursor:pointer;transition:transform .16s ease,background .16s,color .16s}
+  .item .pill{position:absolute;left:calc(100% + 12px);top:50%;transform:translate(-4px,-50%);opacity:0;pointer-events:none;white-space:nowrap;
+    font:700 10.5px Inter;letter-spacing:.06em;text-transform:uppercase;background:#ededed;color:#0a0a0a;padding:5px 9px;border-radius:7px;transition:opacity .14s,transform .14s}
+  .item:hover .pill,.item:focus-visible .pill{opacity:1;transform:translate(0,-50%)}
+  .item:hover{color:#ededed}
+  @media (prefers-reduced-motion:reduce){.item,.item .pill{transition:none}}
+
+  /* A: one capsule */
+  .a .dock{display:flex;flex-direction:column;gap:4px;padding:6px;border-radius:999px;background:rgba(17,17,17,.88);border:1px solid #232323;backdrop-filter:blur(6px);box-shadow:0 12px 40px -12px rgba(0,0,0,.8)}
+  .a .item{width:38px;height:38px;border-radius:999px}
+  .a .item:hover{background:#1c1c1c}
+  .a .item.on{background:#ededed;color:#0a0a0a}
+  .a .panes{left:84px}
+
+  /* B: separate tiles with dock magnification */
+  .b .dock{display:flex;flex-direction:column;gap:8px}
+  .b .item{width:46px;height:46px;border-radius:14px;background:rgba(20,20,20,.9);border:1px solid #262626;box-shadow:0 6px 18px -8px rgba(0,0,0,.8);transform-origin:left center}
+  .b .item.on{color:#7dd3fc;border-color:#3a3a3a;background:#1a1a1a}
+  .b .item:hover{transform:scale(1.22)}
+  .b .item:has(+ .item:hover),.b .item:hover + .item{transform:scale(1.08)}
+  .b .panes{left:92px}
+
+  /* C: capsule with labels always visible */
+  .c .dock{display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:22px;background:rgba(17,17,17,.88);border:1px solid #232323;backdrop-filter:blur(6px)}
+  .c .item{width:58px;height:50px;border-radius:16px;flex-direction:column;gap:4px}
+  .c .item small{font:500 9.5px Inter;color:#5c5c5c}
+  .c .item:hover{background:#1c1c1c}
+  .c .item.on{background:#1c1c1c;color:#7dd3fc}
+  .c .item.on small{color:#ededed}
+  .c .panes{left:98px}
+
+  /* mobile strip */
+  .phone{width:300px;height:520px;margin:0 auto}
+  .phone .panes{left:12px;right:12px;top:12px;bottom:84px;grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+  .phone .dock{left:50%;top:auto;bottom:14px;transform:translateX(-50%);flex-direction:row}
+  .phone .item .pill{display:none}
+  .row{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap}
+  .row .note{flex:1;min-width:240px;color:#8f8f8f;font-size:13.5px;line-height:1.6;padding-top:8px}
+  @media (max-width:720px){.panes{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Floating format dock: three takes</h1>
+  <p class="intro">The panes get the full width; the formats float in a dock over the grid. <b>Hover the items</b> to see the label pill (and the grow effect in B). JSON is selected in each.</p>
+
+  <section class="block a">
+    <div class="bh"><span class="tag">A</span><h2>One capsule</h2><span>a single pill holding round buttons; selected = filled white; label pill on hover</span></div>
+    <div class="app">
+      <div class="nav"><div><i></i>formatly</div><span>Shortcuts</span></div>
+      <div class="work">
+        <nav class="dock">
+          <a class="item on" tabindex="0">{ }<span class="pill">JSON</span></a>
+          <a class="item" tabindex="0">---<span class="pill">YAML</span></a>
+          <a class="item" tabindex="0">-&gt;<span class="pill">Mermaid</span></a>
+          <a class="item" tabindex="0">&lt;/&gt;<span class="pill">XML</span></a>
+          <a class="item" tabindex="0">SQL<span class="pill">SQL</span></a>
+          <a class="item" tabindex="0">#<span class="pill">Markdown</span></a>
+        </nav>
+        <div class="panes">
+          <div class="pane"><div class="ph">Input · JSON</div><div class="code">{"user":{"id":<u>42</u>,"name":<s>"Asha"</s>}}</div></div>
+          <div class="pane"><div class="ph">Output</div><div class="code">{
+  "user": {
+    "id": <u>42</u>,
+    "name": <s>"Asha"</s>
+  }
+}</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block b">
+    <div class="bh"><span class="tag">B</span><h2>Separate tiles, like your screenshot</h2><span>each format its own rounded tile; hovered tile grows and its neighbours lift a little (macOS dock feel)</span></div>
+    <div class="app">
+      <div class="nav"><div><i></i>formatly</div><span>Shortcuts</span></div>
+      <div class="work">
+        <nav class="dock">
+          <a class="item on" tabindex="0">{ }<span class="pill">JSON</span></a>
+          <a class="item" tabindex="0">---<span class="pill">YAML</span></a>
+          <a class="item" tabindex="0">-&gt;<span class="pill">Mermaid</span></a>
+          <a class="item" tabindex="0">&lt;/&gt;<span class="pill">XML</span></a>
+          <a class="item" tabindex="0">SQL<span class="pill">SQL</span></a>
+          <a class="item" tabindex="0">#<span class="pill">Markdown</span></a>
+        </nav>
+        <div class="panes">
+          <div class="pane"><div class="ph">Input · JSON</div><div class="code">{"user":{"id":<u>42</u>,"name":<s>"Asha"</s>}}</div></div>
+          <div class="pane"><div class="ph">Output</div><div class="code">{
+  "user": {
+    "id": <u>42</u>,
+    "name": <s>"Asha"</s>
+  }
+}</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block c">
+    <div class="bh"><span class="tag">C</span><h2>Capsule with tiny labels</h2><span>names always visible under the symbols, so nobody has to hover to learn what "---" means</span></div>
+    <div class="app">
+      <div class="nav"><div><i></i>formatly</div><span>Shortcuts</span></div>
+      <div class="work">
+        <nav class="dock">
+          <a class="item on" tabindex="0">{ }<small>JSON</small></a>
+          <a class="item" tabindex="0">---<small>YAML</small></a>
+          <a class="item" tabindex="0">-&gt;<small>Mermaid</small></a>
+          <a class="item" tabindex="0">&lt;/&gt;<small>XML</small></a>
+          <a class="item" tabindex="0">SQL<small>SQL</small></a>
+          <a class="item" tabindex="0">#<small>Markdown</small></a>
+        </nav>
+        <div class="panes">
+          <div class="pane"><div class="ph">Input · JSON</div><div class="code">{"user":{"id":<u>42</u>,"name":<s>"Asha"</s>}}</div></div>
+          <div class="pane"><div class="ph">Output</div><div class="code">{
+  "user": {
+    "id": <u>42</u>,
+    "name": <s>"Asha"</s>
+  }
+}</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block a">
+    <div class="bh"><span class="tag">Phone</span><h2>Same dock on a phone</h2><span>any of the three turns into a floating bar at the bottom, like an app tab bar</span></div>
+    <div class="row">
+      <div class="app phone">
+        <div class="nav"><div><i></i>formatly</div><span>Shortcuts</span></div>
+        <div class="work">
+          <div class="panes">
+            <div class="pane"><div class="ph">Input · JSON</div></div>
+            <div class="pane"><div class="ph">Output</div></div>
+          </div>
+          <nav class="dock">
+            <a class="item on">{ }</a><a class="item">---</a><a class="item">-&gt;</a><a class="item">&lt;/&gt;</a><a class="item">SQL</a><a class="item">#</a>
+          </nav>
+        </div>
+      </div>
+      <p class="note">On phones the bottom of the screen is where thumbs are, so the dock moves there and the panes stack above it. The pills are skipped on phones (no hover), so the selected format is shown by the filled button plus the "Input · JSON" header.</p>
+    </div>
+  </section>
+</div>
+</body>
+</html>

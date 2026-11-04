@@ -44,17 +44,37 @@ describe("FormatRail", () => {
     expect(screen.getByRole("button", { name: "Expand format menu" })).toHaveAttribute("aria-expanded", "false");
   });
 
-  it("keeps format names for screen readers and hover when collapsed", () => {
+  // jsdom can't apply CSS, so these check the classes that hide or show names.
+  it("closed: names are for screen readers, with a hover/focus pill", () => {
     render(<FormatRail activeId="json" collapsed onToggle={() => {}} />);
     const yaml = screen.getByRole("link", { name: "YAML" });
-    expect(yaml).toHaveAttribute("title", "YAML");
-    expect(screen.getByText("YAML")).toHaveClass("md:sr-only");
+    const name = yaml.querySelector("[data-name]")!;
+    expect(name).toHaveClass("sr-only");
+    expect(name).not.toHaveClass("md:not-sr-only");
+    const pill = yaml.querySelector("[data-pill]")!;
+    expect(pill).toHaveTextContent("YAML");
+    expect(pill).toHaveAttribute("aria-hidden", "true");
+    expect(pill).toHaveClass("group-hover:opacity-100", "group-focus-visible:opacity-100");
   });
 
-  it("shows format names normally when expanded", () => {
+  it("open: names are shown beside the symbols, without pills", () => {
     render(<FormatRail activeId="json" collapsed={false} onToggle={() => {}} />);
-    expect(screen.getByText("YAML")).not.toHaveClass("md:sr-only");
-    expect(screen.getByRole("link", { name: "YAML" })).not.toHaveAttribute("title");
+    const yaml = screen.getByRole("link", { name: "YAML" });
+    expect(yaml.querySelector("[data-name]")).toHaveClass("md:not-sr-only");
+    expect(yaml.querySelector("[data-pill]")).toBeNull();
+  });
+
+  it("phones always show symbols only (names stay readable to screen readers)", () => {
+    render(<FormatRail activeId="json" collapsed={false} onToggle={() => {}} />);
+    const names = document.querySelectorAll("[data-name]");
+    expect(names).toHaveLength(6);
+    for (const name of names) expect(name).toHaveClass("sr-only");
+  });
+
+  it("marks the selected format as filled", () => {
+    render(<FormatRail activeId="xml" collapsed onToggle={() => {}} />);
+    expect(screen.getByRole("link", { name: "XML" })).toHaveClass("bg-text");
+    expect(screen.getByRole("link", { name: "JSON" })).not.toHaveClass("bg-text");
   });
 
   it("is labelled as format navigation", () => {
