@@ -14,5 +14,5 @@ export const markdown = {
     // Any text is valid Markdown, so there is no invalid example.
     invalid: "",
   },
-  load: () => import("../formatters/echo").then((m) => m.echo),
+  load: () => import("../formatters/markdown").then((m) => m.formatMarkdown),
 } as const satisfies FormatDefinition;
