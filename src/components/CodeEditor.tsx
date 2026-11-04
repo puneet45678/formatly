@@ -1,16 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CodeMirror, { type Extension } from "@uiw/react-codemirror";
 import { Decoration, EditorView, type ViewUpdate } from "@codemirror/view";
 import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
-import { json } from "@codemirror/lang-json";
-import { yaml } from "@codemirror/lang-yaml";
-import { xml } from "@codemirror/lang-xml";
-import { sql } from "@codemirror/lang-sql";
-import { markdown } from "@codemirror/lang-markdown";
 import type { FormatId } from "@/formats/types";
+import { FORMAT_UI } from "./format-ui";
 
 interface CodeEditorProps {
   value: string;
@@ -22,15 +18,6 @@ interface CodeEditorProps {
   ariaLabel: string;
   placeholder?: string;
 }
-
-const languages: Record<FormatId, () => Extension[]> = {
-  json: () => [json()],
-  yaml: () => [yaml()],
-  xml: () => [xml()],
-  sql: () => [sql()],
-  markdown: () => [markdown()],
-  mermaid: () => [], // no CodeMirror grammar for Mermaid; shown as plain text
-};
 
 // Colors from the design tokens in globals.css.
 const highlight = HighlightStyle.define([
@@ -74,15 +61,47 @@ function errorLineExtension(line: number): Extension {
   });
 }
 
+// "No highlighting", kept at module level: a fresh [] on every render would
+// change the extensions and make CodeMirror rebuild the editor setup.
+const PLAIN_TEXT: Extension = [];
+
+/**
+ * The format's syntax highlighting, loaded on demand. Until it arrives (a
+ * moment on first use) the editor works as plain text.
+ */
+function useLanguage(formatId: FormatId): Extension {
+  // Remembers which format the loaded language is for, so after a format
+  // switch the old language is never applied to the new format's text.
+  const [loaded, setLoaded] = useState<{ formatId: FormatId; language: Extension } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    FORMAT_UI[formatId].language().then(
+      (language) => {
+        if (!cancelled) setLoaded({ formatId, language });
+      },
+      () => {
+        // Highlighting failed to load (e.g. offline): keep editing as plain text.
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [formatId]);
+
+  return loaded?.formatId === formatId ? loaded.language : PLAIN_TEXT;
+}
+
 export function CodeEditor({ value, onChange, formatId, readOnly, errorLine, ariaLabel, placeholder }: CodeEditorProps) {
+  const language = useLanguage(formatId);
   const extensions = useMemo(
     () => [
-      ...languages[formatId](),
+      language,
       syntaxHighlighting(highlight),
       EditorView.contentAttributes.of({ "aria-label": ariaLabel }),
       ...(errorLine ? [errorLineExtension(errorLine)] : []),
     ],
-    [formatId, errorLine, ariaLabel],
+    [language, errorLine, ariaLabel],
   );
 
   // Hand CodeMirror one stable callback that always calls the latest onChange,

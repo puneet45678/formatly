@@ -6,14 +6,16 @@ import { OutputPane } from "@/components/OutputPane";
 const markdownOk = { status: "ok" as const, output: "# Title\n\nBody" };
 
 describe("OutputPane", () => {
-  it("shows Markdown as a rendered preview by default", () => {
+  it("shows Markdown as a rendered preview by default", async () => {
     render(<OutputPane format={getFormat("markdown")} state={markdownOk} />);
-    expect(screen.getByRole("heading", { level: 1, name: "Title" })).toBeInTheDocument();
+    // The preview component loads lazily, so wait for it.
+    expect(await screen.findByRole("heading", { level: 1, name: "Title" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Preview" })).toHaveAttribute("aria-pressed", "true");
   });
 
-  it("switches Markdown to the formatted source", () => {
+  it("switches Markdown to the formatted source", async () => {
     const { container } = render(<OutputPane format={getFormat("markdown")} state={markdownOk} />);
+    await screen.findByRole("heading", { level: 1, name: "Title" });
     fireEvent.click(screen.getByRole("button", { name: "Source" }));
     expect(screen.queryByRole("heading", { name: "Title" })).toBeNull();
     expect(container.querySelector(".cm-content")).toHaveTextContent("# Title");

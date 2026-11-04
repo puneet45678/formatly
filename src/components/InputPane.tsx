@@ -1,7 +1,7 @@
 "use client";
 
-import { SQL_DIALECTS, getFormat } from "@/formats/registry";
-import type { FormatId, SqlDialect } from "@/formats/types";
+import { getFormat } from "@/formats/registry";
+import type { FormatId, FormatSettings } from "@/formats/types";
 import { CodeEditor } from "./CodeEditor";
 
 interface InputPaneProps {
@@ -10,8 +10,9 @@ interface InputPaneProps {
   onChange: (value: string) => void;
   onClear: () => void;
   errorLine?: number;
-  sqlDialect: SqlDialect;
-  onSqlDialectChange: (dialect: SqlDialect) => void;
+  /** The format's current settings, one dropdown each (e.g. the SQL dialect). */
+  settings: FormatSettings;
+  onSettingChange: (key: string, value: string) => void;
   hidden?: boolean;
 }
 
@@ -21,31 +22,33 @@ export function InputPane({
   onChange,
   onClear,
   errorLine,
-  sqlDialect,
-  onSqlDialectChange,
+  settings,
+  onSettingChange,
   hidden,
 }: InputPaneProps) {
-  const { label } = getFormat(formatId);
+  const format = getFormat(formatId);
+  const { label } = format;
 
   return (
     <section aria-label="Input" className="pane" hidden={hidden}>
       <div className="pane-header">
         <b className="font-medium text-text">Input · {label}</b>
         <div className="flex items-center gap-2">
-          {formatId === "sql" && (
+          {format.settings.map((setting) => (
             <select
-              aria-label="SQL dialect"
-              value={sqlDialect}
-              onChange={(e) => onSqlDialectChange(e.target.value as SqlDialect)}
+              key={setting.key}
+              aria-label={setting.label}
+              value={settings[setting.key] ?? setting.default}
+              onChange={(e) => onSettingChange(setting.key, e.target.value)}
               className="chip bg-[#161616] text-text"
             >
-              {SQL_DIALECTS.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.label}
+              {setting.options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
-          )}
+          ))}
           <button type="button" onClick={onClear} className="chip">
             Clear
           </button>

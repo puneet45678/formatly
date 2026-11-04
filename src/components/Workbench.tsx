@@ -13,9 +13,10 @@ import { OutputPane } from "./OutputPane";
 /** The whole tool for one format: rail on the left, input and output panes. */
 export function Workbench({ formatId }: { formatId: FormatId }) {
   const format = getFormat(formatId);
-  const { inputs, setInput, sqlDialect, setSqlDialect, railCollapsed, toggleRail } = useWorkbench();
+  const { inputs, setInput, settings, setSetting, railCollapsed, toggleRail } = useWorkbench();
   const input = inputs[formatId];
-  const state = useFormattedOutput(formatId, input, formatId === "sql" ? { sqlDialect } : undefined);
+  const formatSettings = settings[formatId];
+  const state = useFormattedOutput(formatId, input, formatSettings);
   const [outputExpanded, setOutputExpanded] = useState(false);
 
   useEffect(() => rememberFormat(formatId), [formatId]);
@@ -52,8 +53,8 @@ export function Workbench({ formatId }: { formatId: FormatId }) {
           onChange={(text) => setInput(formatId, text)}
           onClear={() => setInput(formatId, "")}
           errorLine={state.status === "error" ? state.error.line : undefined}
-          sqlDialect={sqlDialect}
-          onSqlDialectChange={setSqlDialect}
+          settings={formatSettings}
+          onSettingChange={(key, value) => setSetting(formatId, key, value)}
         />
         <OutputPane
           format={format}

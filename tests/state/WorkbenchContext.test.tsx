@@ -20,28 +20,35 @@ describe("WorkbenchContext", () => {
     expect(result.current.inputs.yaml).toBe("a: 1");
   });
 
-  it('defaults sql dialect to "sql"', () => {
+  it("starts each format with its default settings", () => {
     const { result } = renderWorkbench();
-    expect(result.current.sqlDialect).toBe("sql");
+    expect(result.current.settings.sql).toEqual({ dialect: "sql" });
+    expect(result.current.settings.json).toEqual({});
   });
 
-  it("restores a stored dialect", () => {
-    localStorage.setItem("formatly:sqlDialect", "postgresql");
+  it("changes and remembers a setting", () => {
     const { result } = renderWorkbench();
-    expect(result.current.sqlDialect).toBe("postgresql");
+    act(() => result.current.setSetting("sql", "dialect", "mysql"));
+    expect(result.current.settings.sql.dialect).toBe("mysql");
+    expect(localStorage.getItem("formatly:settings:sql")).toBe('{"dialect":"mysql"}');
+  });
+
+  it("restores stored settings, ignoring bad ones", () => {
+    localStorage.setItem("formatly:settings:sql", '{"dialect":"postgresql"}');
+    localStorage.setItem("formatly:settings:json", "{oops");
+    const { result, unmount } = renderWorkbench();
+    expect(result.current.settings.sql).toEqual({ dialect: "postgresql" });
+    expect(result.current.settings.json).toEqual({});
+    unmount();
+
+    localStorage.setItem("formatly:settings:sql", "{oops");
+    expect(renderWorkbench().result.current.settings.sql).toEqual({ dialect: "sql" });
   });
 
   it("ignores an unknown stored dialect", () => {
-    localStorage.setItem("formatly:sqlDialect", "oracle");
+    localStorage.setItem("formatly:settings:sql", '{"dialect":"oracle"}');
     const { result } = renderWorkbench();
-    expect(result.current.sqlDialect).toBe("sql");
-  });
-
-  it("persists dialect changes", () => {
-    const { result } = renderWorkbench();
-    act(() => result.current.setSqlDialect("mysql"));
-    expect(result.current.sqlDialect).toBe("mysql");
-    expect(localStorage.getItem("formatly:sqlDialect")).toBe("mysql");
+    expect(result.current.settings.sql).toEqual({ dialect: "sql" });
   });
 
   it("never writes input text to storage", () => {

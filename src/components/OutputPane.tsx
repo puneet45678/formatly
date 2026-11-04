@@ -1,30 +1,42 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, lazy, useState, type ComponentType, type LazyExoticComponent } from "react";
 import { Maximize2, Minimize2 } from "lucide-react";
-import type { FormatError, FormatMeta } from "@/formats/types";
+import { FORMATS, type RegisteredFormat } from "@/formats/registry";
+import type { FormatError, FormatId } from "@/formats/types";
 import type { OutputState } from "@/hooks/useFormattedOutput";
 import { cn } from "@/lib/utils";
 import { CodeEditor } from "./CodeEditor";
 import { DiagramView } from "./DiagramView";
-import { MarkdownPreview } from "./MarkdownPreview";
+import { FORMAT_UI } from "./format-ui";
 import { OutputActions } from "./OutputActions";
 
 interface OutputPaneProps {
-  format: FormatMeta;
+  format: RegisteredFormat;
   state: OutputState;
   /** Output fills the workspace and the input is hidden. */
   expanded?: boolean;
   onToggleExpand?: () => void;
 }
 
-/** How Markdown output is shown. Copy and Download always use the source. */
-type MarkdownView = "preview" | "source";
+/** How output is shown for formats with a preview. Copy and Download always use the source. */
+type OutputView = "preview" | "source";
 
-const MARKDOWN_VIEWS: { id: MarkdownView; label: string }[] = [
+const OUTPUT_VIEWS: { id: OutputView; label: string }[] = [
   { id: "preview", label: "Preview" },
   { id: "source", label: "Source" },
 ];
+
+type Preview = ComponentType<{ source: string }>;
+
+// One React.lazy component per format that has a preview, made once here
+// (never during render, which would remount it every time). Creating it
+// downloads nothing: the preview's code loads the first time it is shown.
+const LAZY_PREVIEWS: Partial<Record<FormatId, LazyExoticComponent<Preview>>> = {};
+for (const { id } of FORMATS) {
+  const loadPreview = FORMAT_UI[id].preview;
+  if (loadPreview) LAZY_PREVIEWS[id] = lazy(() => loadPreview().then((component) => ({ default: component })));
+}
 
 export function describeError(error: FormatError): string {
   const where = error.column ? `Line ${error.line}, column ${error.column}` : `Line ${error.line}`;
@@ -32,7 +44,8 @@ export function describeError(error: FormatError): string {
 }
 
 export function OutputPane({ format, state, expanded = false, onToggleExpand }: OutputPaneProps) {
-  const [markdownView, setMarkdownView] = useState<MarkdownView>("preview");
+  const [view, setView] = useState<OutputView>("preview");
+  const hasPreview = LAZY_PREVIEWS[format.id] !== undefined;
   const ExpandIcon = expanded ? Minimize2 : Maximize2;
 
   return (
@@ -40,17 +53,17 @@ export function OutputPane({ format, state, expanded = false, onToggleExpand }: 
       <div className="pane-header">
         <div className="flex items-center gap-3">
           <b className="font-medium text-text">Output</b>
-          {format.id === "markdown" && (
-            <div className="flex rounded-md border border-line p-px" role="group" aria-label="Markdown view">
-              {MARKDOWN_VIEWS.map(({ id, label }) => (
+          {hasPreview && (
+            <div className="flex rounded-md border border-line p-px" role="group" aria-label={`${format.label} view`}>
+              {OUTPUT_VIEWS.map(({ id, label }) => (
                 <button
                   key={id}
                   type="button"
-                  aria-pressed={markdownView === id}
-                  onClick={() => setMarkdownView(id)}
+                  aria-pressed={view === id}
+                  onClick={() => setView(id)}
                   className={cn(
                     "rounded-[5px] px-2 py-0.5 text-[11px]",
-                    markdownView === id ? "bg-[#1c1c1c] text-text" : "text-muted hover:text-text",
+                    view === id ? "bg-[#1c1c1c] text-text" : "text-muted hover:text-text",
                   )}
                 >
                   {label}
@@ -79,12 +92,12 @@ export function OutputPane({ format, state, expanded = false, onToggleExpand }: 
           )}
         </div>
       </div>
-      <OutputBody format={format} state={state} markdownView={markdownView} />
+      <OutputBody format={format} state={state} view={view} />
     </section>
   );
 }
 
-function OutputBody({ format, state, markdownView }: OutputPaneProps & { markdownView: MarkdownView }) {
+function OutputBody({ format, state, view }: OutputPaneProps & { view: OutputView }) {
   switch (state.status) {
     case "empty":
       return <p className="p-3.5 text-[12.5px] text-dim">Paste {format.label} on the left</p>;
@@ -94,9 +107,19 @@ function OutputBody({ format, state, markdownView }: OutputPaneProps & { markdow
           {describeError(state.error)}
         </p>
       );
-    case "ok":
-      if (format.outputKind === "diagram") return <DiagramView svg={state.output} />;
-      if (format.id === "markdown" && markdownView === "preview") return <MarkdownPreview markdown={state.output} />;
-      return <CodeEditor value={state.output} formatId={format.id} readOnly ariaLabel={`Formatted ${format.label}`} />;
+    case "ok": {
+      if (format.output === "diagram") return <DiagramView svg={state.output} />;
+      const source = (
+        <CodeEditor value={state.output} formatId={format.id} readOnly ariaLabel={`Formatted ${format.label}`} />
+      );
+      const Preview = LAZY_PREVIEWS[format.id];
+      if (!Preview || view === "source") return source;
+      // While the preview's code downloads, show the source instead of a blank pane.
+      return (
+        <Suspense fallback={source}>
+          <Preview source={state.output} />
+        </Suspense>
+      );
+    }
   }
 }
