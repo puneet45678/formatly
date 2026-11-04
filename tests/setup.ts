@@ -13,6 +13,9 @@ Range.prototype.getBoundingClientRect = () => emptyRect;
 Range.prototype.getClientRects = () =>
   ({ length: 0, item: () => null, [Symbol.iterator]: [][Symbol.iterator] }) as unknown as DOMRectList;
 
+// jsdom has no scrolling either.
+Element.prototype.scrollIntoView = function scrollIntoView() {};
+
 if (!window.matchMedia) {
   window.matchMedia = (query: string) =>
     ({

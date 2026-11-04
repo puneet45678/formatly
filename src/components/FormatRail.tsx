@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { FORMATS } from "@/formats/registry";
 import type { FormatId } from "@/formats/types";
@@ -7,6 +10,13 @@ import type { FormatId } from "@/formats/types";
  * scrollable row of pills under the top bar.
  */
 export function FormatRail({ activeId }: { activeId: FormatId }) {
+  const activeLink = useRef<HTMLAnchorElement>(null);
+
+  // On phones the row scrolls sideways; make sure the selected pill is on screen.
+  useEffect(() => {
+    activeLink.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [activeId]);
+
   return (
     <nav
       aria-label="Formats"
@@ -19,6 +29,7 @@ export function FormatRail({ activeId }: { activeId: FormatId }) {
           <Link
             key={format.id}
             href={`/${format.id}`}
+            ref={active ? activeLink : undefined}
             aria-current={active ? "page" : undefined}
             className={`flex shrink-0 items-center gap-[9px] rounded-[7px] px-2.5 py-[7px] text-[12.5px] whitespace-nowrap ${
               active ? "bg-[#1c1c1c] text-text" : "text-muted hover:text-text"
