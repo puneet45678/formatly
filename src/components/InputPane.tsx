@@ -12,13 +12,23 @@ interface InputPaneProps {
   errorLine?: number;
   sqlDialect: SqlDialect;
   onSqlDialectChange: (dialect: SqlDialect) => void;
+  hidden?: boolean;
 }
 
-export function InputPane({ formatId, value, onChange, onClear, errorLine, sqlDialect, onSqlDialectChange }: InputPaneProps) {
+export function InputPane({
+  formatId,
+  value,
+  onChange,
+  onClear,
+  errorLine,
+  sqlDialect,
+  onSqlDialectChange,
+  hidden,
+}: InputPaneProps) {
   const { label } = getFormat(formatId);
 
   return (
-    <section aria-label="Input" className="pane">
+    <section aria-label="Input" className="pane" hidden={hidden}>
       <div className="pane-header">
         <b className="font-medium text-text">Input · {label}</b>
         <div className="flex items-center gap-2">

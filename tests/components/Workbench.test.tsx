@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditorView } from "@codemirror/view";
 import type { FormatId, FormatOptions, FormatResult } from "@/formats/types";
@@ -18,7 +18,8 @@ function renderWorkbench(formatId: FormatId) {
   );
 }
 
-const inputPane = () => screen.getByRole("region", { name: "Input" });
+// A plain selector, so the pane can still be found while expanded output hides it.
+const inputPane = () => document.querySelector('section[aria-label="Input"]') as HTMLElement;
 const outputPane = () => screen.getByRole("region", { name: "Output" });
 
 /** Types into the input editor the way a real edit does, through CodeMirror. */
@@ -113,6 +114,23 @@ describe("Workbench", () => {
     typeInput("graph TD; A-->B");
     expect(await within(outputPane()).findByTestId("d")).toBeInTheDocument();
     expect(outputPane().querySelector(".cm-editor")).toBeNull();
+  });
+
+  it("expands the output over the input and back", async () => {
+    renderWorkbench("json");
+    typeInput('{"a":1}');
+    await userEvent.click(within(outputPane()).getByRole("button", { name: "Expand output" }));
+    expect(inputPane()).not.toBeVisible();
+    await userEvent.click(within(outputPane()).getByRole("button", { name: "Exit expanded output" }));
+    expect(inputPane()).toBeVisible();
+    expect(inputPane().querySelector(".cm-content")).toHaveTextContent('{"a":1}');
+  });
+
+  it("leaves expanded output with Esc", async () => {
+    renderWorkbench("json");
+    await userEvent.click(within(outputPane()).getByRole("button", { name: "Expand output" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(inputPane()).toBeVisible();
   });
 
   it("remembers the format", () => {

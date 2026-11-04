@@ -72,6 +72,11 @@ The user compared three layouts and chose **B: a format list in a side rail**. A
 - **See-through top bar.** No tint or blur, just the bottom hairline, so the grid runs under it.
 - **Collapsible format menu (desktop).** A button at the top of the rail, or ⌘/Ctrl + \, collapses it to a ~52px strip of format symbols. Names stay available as hover titles and to screen readers. The choice is remembered (`formatly:railCollapsed`). Phones keep the pill row.
 
+**Reading the output (decided by the owner):**
+- **Expand.** A button in the output header makes the output fill the workspace and hides the input (kept mounted, so nothing is lost). Esc or the same button returns. Works for every format.
+- **Mermaid zoom and pan.** Zoom out / 100% / zoom in / fit controls in the diagram's corner, wheel to zoom around the cursor, drag to pan. Diagrams open fitted to the pane but never above 100%.
+- **Markdown Preview | Source.** Markdown output defaults to a rendered **Preview**; **Source** shows the formatted Markdown text. Copy and Download always use the source, so the tool still formats rather than converts. In the preview, raw HTML is not rendered, links open in a new tab without a referrer, and **remote images are blocked** until the user clicks "Load image" (then loaded with no referrer), because fetching them would tell a third-party server the content was opened. Inline `data:` images show directly.
+
 **Name:** "formatly" is a placeholder I used in the mockup, not a decision. *(my call to use it until the user picks a name)*
 
 ## 6. Behaviour

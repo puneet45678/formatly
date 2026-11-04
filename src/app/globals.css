@@ -67,6 +67,9 @@ body {
   .chip {
     @apply rounded-md border border-line px-2 py-[3px] text-[11px] text-muted hover:text-text disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:text-muted;
   }
+  .zoom-btn {
+    @apply flex h-6 min-w-6 items-center justify-center rounded-md px-1 hover:bg-[#1c1c1c] hover:text-text;
+  }
   .status {
     @apply flex items-center gap-1.5 text-[11px] before:size-1.5 before:rounded-full before:content-[''];
   }
@@ -76,6 +79,120 @@ body {
   .status-error {
     @apply text-err before:bg-err;
   }
+}
+
+/* Rendered Markdown in the output pane. */
+.md-preview {
+  max-width: 72ch;
+  margin: 0 auto;
+  padding: 20px 24px 40px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #d4d4d4;
+}
+.md-preview > :first-child {
+  margin-top: 0;
+}
+.md-preview :where(h1, h2, h3, h4) {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.6em 0 0.6em;
+}
+.md-preview h1 {
+  font-size: 1.75em;
+  letter-spacing: -0.01em;
+}
+.md-preview h2 {
+  font-size: 1.35em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--line);
+}
+.md-preview h3 {
+  font-size: 1.1em;
+}
+.md-preview :where(p, ul, ol, blockquote, pre, table) {
+  margin: 0 0 1em;
+}
+.md-preview :where(ul, ol) {
+  padding-left: 1.4em;
+}
+.md-preview ul {
+  list-style: disc;
+}
+.md-preview ol {
+  list-style: decimal;
+}
+.md-preview li + li {
+  margin-top: 0.25em;
+}
+.md-preview li:has(> input[type="checkbox"]) {
+  list-style: none;
+  margin-left: -1.4em;
+}
+.md-preview a {
+  color: var(--k);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md-preview strong {
+  color: var(--text);
+}
+.md-preview blockquote {
+  border-left: 2px solid var(--line);
+  padding-left: 1em;
+  color: var(--muted);
+}
+.md-preview :not(pre) > code {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 0.85em;
+  background: #1c1c1c;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 0.1em 0.35em;
+}
+.md-preview pre {
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12.5px;
+  line-height: 1.6;
+  background: #0d0d0d;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px 14px;
+  overflow-x: auto;
+}
+.md-preview table {
+  border-collapse: collapse;
+  display: block;
+  overflow-x: auto;
+}
+.md-preview :where(th, td) {
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+}
+.md-preview th {
+  background: #141414;
+  color: var(--text);
+  font-weight: 600;
+}
+.md-preview hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+  margin: 2em 0;
+}
+.md-preview img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+.md-image-blocked {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12.5px;
+  color: var(--muted);
 }
 
 dialog::backdrop {

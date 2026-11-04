@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { getFormat } from "@/formats/registry";
 import type { FormatId } from "@/formats/types";
 import { useFormattedOutput } from "@/hooks/useFormattedOutput";
+import { cn } from "@/lib/utils";
 import { rememberFormat, useWorkbench } from "@/state/WorkbenchContext";
 import { FormatRail } from "./FormatRail";
 import { InputPane } from "./InputPane";
@@ -15,14 +16,34 @@ export function Workbench({ formatId }: { formatId: FormatId }) {
   const { inputs, setInput, sqlDialect, setSqlDialect, railCollapsed, toggleRail } = useWorkbench();
   const input = inputs[formatId];
   const state = useFormattedOutput(formatId, input, formatId === "sql" ? { sqlDialect } : undefined);
+  const [outputExpanded, setOutputExpanded] = useState(false);
 
   useEffect(() => rememberFormat(formatId), [formatId]);
+
+  // Esc leaves expanded output (unless it's closing a dialog).
+  useEffect(() => {
+    if (!outputExpanded) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape" && !(e.target instanceof Element && e.target.closest("dialog"))) {
+        setOutputExpanded(false);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [outputExpanded]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col md:flex-row">
       <FormatRail activeId={formatId} collapsed={railCollapsed} onToggle={toggleRail} />
-      <main className="grid min-h-0 flex-1 grid-cols-1 gap-3.5 overflow-y-auto p-3 md:grid-cols-2 md:overflow-hidden md:p-[18px]">
+      <main
+        className={cn(
+          "grid min-h-0 flex-1 grid-cols-1 gap-3.5 overflow-y-auto p-3 md:overflow-hidden md:p-[18px]",
+          !outputExpanded && "md:grid-cols-2",
+        )}
+      >
+        {/* Kept mounted while hidden so the editor keeps its text and undo history. */}
         <InputPane
+          hidden={outputExpanded}
           formatId={formatId}
           value={input}
           onChange={(text) => setInput(formatId, text)}
@@ -31,7 +52,12 @@ export function Workbench({ formatId }: { formatId: FormatId }) {
           sqlDialect={sqlDialect}
           onSqlDialectChange={setSqlDialect}
         />
-        <OutputPane format={format} state={state} />
+        <OutputPane
+          format={format}
+          state={state}
+          expanded={outputExpanded}
+          onToggleExpand={() => setOutputExpanded((expanded) => !expanded)}
+        />
       </main>
     </div>
   );

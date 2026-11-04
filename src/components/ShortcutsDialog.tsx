@@ -10,6 +10,7 @@ interface ShortcutsDialogProps {
 const SHORTCUTS = [
   { action: "Copy output", keys: "⌘/Ctrl + Shift + C" },
   { action: "Collapse or expand the format menu", keys: "⌘/Ctrl + \\" },
+  { action: "Leave expanded output", keys: "Esc" },
   // Tab indents inside the editor, so leaving it takes Esc first.
   { action: "Leave the editor", keys: "Esc, then Tab" },
 ];
