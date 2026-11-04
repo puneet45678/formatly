@@ -14,5 +14,5 @@ export const mermaid = {
     valid: "graph TD; A-->B",
     invalid: "graph TD; A-->",
   },
-  load: () => import("../formatters/echo").then((m) => m.placeholderDiagram),
+  load: () => import("../formatters/mermaid").then((m) => m.renderMermaid),
 } as const satisfies FormatDefinition;
