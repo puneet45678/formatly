@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Typewriter ideas</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#050505;color:#ededed;font-family:Inter,system-ui,sans-serif;padding:32px 20px 60px}
+  .page{max-width:1100px;margin:0 auto}
+  h1{font-size:22px;font-weight:600}
+  .intro{color:#8f8f8f;font-size:14px;margin-top:6px;line-height:1.55}
+  .block{margin-top:38px}
+  .bh{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .tag{font:600 12px Inter;background:#1f1f1f;border:1px solid #333;border-radius:6px;padding:2px 8px}
+  .bh h2{font-size:15px;font-weight:600}
+  .bh span{color:#8f8f8f;font-size:13px}
+
+  .app{position:relative;border:1px solid #232323;border-radius:14px;overflow:hidden;background:#0a0a0a;padding:16px;
+    background-image:linear-gradient(to right,rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.055) 1px,transparent 1px);background-size:44px 44px}
+  .tabs{display:flex;gap:4px;margin-bottom:12px}
+  .tabs button{font:500 11px 'JetBrains Mono';color:#8f8f8f;background:#111;border:1px solid #262626;border-radius:999px;padding:5px 11px;cursor:pointer}
+  .tabs button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}
+  .panes{display:grid;grid-template-columns:1fr 1fr;gap:14px;height:230px}
+  .pane{background:rgba(17,17,17,.88);border:1px solid #232323;border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
+  .ph{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border-bottom:1px solid #232323;font-size:11.5px;color:#8f8f8f}
+  .ph b{color:#ededed;font-weight:500}
+  .chip{font:500 11px Inter;border:1px solid #232323;border-radius:6px;padding:3px 8px;color:#8f8f8f;background:none;cursor:pointer}
+  .chip:hover{color:#ededed}
+  .chip.try{color:#7dd3fc;border-color:rgba(125,211,252,.35)}
+  .body{flex:1;position:relative;font:12px/1.65 'JetBrains Mono',monospace;padding:12px 14px;white-space:pre-wrap;word-break:break-word;cursor:text;outline:none}
+  .body:focus-within{box-shadow:inset 0 0 0 1px #3f3f3f}
+  .ghost{color:#4a4a4a}
+  .caret{display:inline-block;width:7px;height:14px;background:#7dd3fc;vertical-align:-2px;margin-left:1px;animation:blink 1s steps(1) infinite}
+  @keyframes blink{50%{opacity:0}}
+  .real{color:#d4d4d4}
+  textarea{position:absolute;inset:0;width:100%;height:100%;background:transparent;border:0;resize:none;color:#d4d4d4;font:inherit;padding:12px 14px;outline:none}
+  .hint{color:#5c5c5c;font-family:Inter;font-size:12.5px}
+  .out .k{color:#7dd3fc}.out .s{color:#a7f3d0}.out .n{color:#fcd34d}
+  .ok{color:#4ade80;font-size:11px}
+  .note{color:#8f8f8f;font-size:12.5px;margin-top:10px;line-height:1.55}
+
+  .bar{display:flex;align-items:center;gap:10px;padding:6px 6px}
+  .mark{width:24px;height:24px;border-radius:7px;display:grid;place-items:center;font:700 10px 'JetBrains Mono';color:#7dd3fc;background:#111;border:1px solid #2e2e2e}
+  .word{font-size:15px;font-weight:600;letter-spacing:-.02em}
+  .tagline{font:500 13px 'JetBrains Mono';color:#5c5c5c}
+  .tagline b{color:#7dd3fc;font-weight:500}
+  @media (prefers-reduced-motion:reduce){.caret{animation:none}}
+  @media (max-width:720px){.panes{grid-template-columns:1fr;height:auto}.pane{min-height:180px}}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Typewriter: three live examples</h1>
+  <p class="intro">These are running for real. Switch formats with the pills, click into the input to see the ghost typing stop, and press "Try an example".</p>
+
+  <!-- 1 -->
+  <section class="block">
+    <div class="bh"><span class="tag">1</span><h2>Ghost typing in the empty input</h2><span>faint example types itself, pauses, erases, next one. Click in and it stops instantly; nothing is ever inserted.</span></div>
+    <div class="app">
+      <div class="tabs" data-for="g"></div>
+      <div class="panes">
+        <div class="pane"><div class="ph"><b id="g-label">Input · JSON</b><button class="chip">Clear</button></div>
+          <div class="body" id="g-body"><span class="ghost" id="g-ghost"></span><span class="caret" id="g-caret"></span><textarea id="g-area" aria-label="Input" spellcheck="false"></textarea></div>
+        </div>
+        <div class="pane"><div class="ph"><b>Output</b></div><div class="body"><span class="hint" id="g-hint">Paste JSON on the left</span></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section class="block">
+    <div class="bh"><span class="tag">2</span><h2>"Try an example" button</h2><span>types a real sample into the input; the output formats itself live as the text lands</span></div>
+    <div class="app">
+      <div class="panes">
+        <div class="pane"><div class="ph"><b>Input · JSON</b><span style="display:flex;gap:6px"><button class="chip try" id="t-try">Try an example</button><button class="chip" id="t-clear">Clear</button></span></div>
+          <div class="body real" id="t-in"><span class="hint">Paste JSON here, or try an example</span></div>
+        </div>
+        <div class="pane"><div class="ph"><b>Output</b><span class="ok" id="t-ok"></span></div><div class="body out" id="t-out"><span class="hint">Paste JSON on the left</span></div></div>
+      </div>
+    </div>
+    <p class="note">In the real app this goes through the normal formatter, so phase 2's real JSON/YAML/SQL formatting shows up here automatically.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="block">
+    <div class="bh"><span class="tag">3</span><h2>Tagline in the top bar</h2><span>shown for comparison; I'd skip it (always moving, purely decorative)</span></div>
+    <div class="app" style="padding:10px 14px">
+      <div class="bar"><span class="mark">{ }</span><span class="word">formatly</span><span class="tagline">· format your <b id="tl"></b><span class="caret" style="height:12px;width:6px"></span></span></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ── 1: ghost typing ───────────────────────────────────────────
+const EXAMPLES = {
+  JSON: ['{"name": "Asha", "roles": ["admin", "dev"]}', '[{"id": 1, "done": true}, {"id": 2, "done": false}]'],
+  YAML: ['name: formatly\nversion: 1.0\ntags: [json, yaml]', 'server:\n  port: 8080\n  debug: false'],
+  SQL: ['select id, name from users where active = 1 order by name', 'update orders set status = \'shipped\' where id = 42'],
+  Markdown: ['# Release notes\n\n- Live output\n- **Dark** mode', '## Todo\n\n- [x] Grid\n- [ ] Phase 2'],
+};
+const tabs = document.querySelector('[data-for=g]');
+const ghost = document.getElementById('g-ghost'), caret = document.getElementById('g-caret'), area = document.getElementById('g-area');
+let fmt = 'JSON', run = 0;
+Object.keys(EXAMPLES).forEach(name => {
+  const b = document.createElement('button'); b.textContent = name; if (name === fmt) b.className = 'on';
+  b.onclick = () => { tabs.querySelectorAll('button').forEach(x => x.className = ''); b.className = 'on'; fmt = name;
+    document.getElementById('g-label').textContent = 'Input · ' + name; document.getElementById('g-hint').textContent = 'Paste ' + name + ' on the left';
+    area.value = ''; startGhost(); };
+  tabs.appendChild(b);
+});
+const showGhost = on => { ghost.style.display = caret.style.display = on ? '' : 'none'; };
+async function startGhost() {
+  const id = ++run;
+  if (reduce) { ghost.textContent = 'Paste ' + fmt + ' here'; showGhost(true); return; }
+  const alive = () => id === run && document.activeElement !== area && area.value === '';
+  showGhost(true);
+  for (let i = 0; alive(); i = (i + 1) % EXAMPLES[fmt].length) {
+    const text = EXAMPLES[fmt][i];
+    for (let c = 1; c <= text.length && alive(); c++) { ghost.textContent = text.slice(0, c); await sleep(28 + Math.random() * 40); }
+    await sleep(1600);
+    for (let c = text.length; c >= 0 && alive(); c -= 3) { ghost.textContent = text.slice(0, c); await sleep(14); }
+    await sleep(350);
+  }
+}
+area.addEventListener('focus', () => { run++; showGhost(false); });
+area.addEventListener('blur', () => { if (!area.value) startGhost(); });
+area.addEventListener('input', () => { if (area.value) showGhost(false); });
+startGhost();
+
+// ── 2: try an example ─────────────────────────────────────────
+const SAMPLE = '{"user":{"id":42,"name":"Asha","roles":["admin","dev"],"active":true}}';
+const tin = document.getElementById('t-in'), tout = document.getElementById('t-out'), tok = document.getElementById('t-ok');
+let typing = 0;
+function render(text) {
+  try {
+    const pretty = JSON.stringify(JSON.parse(text), null, 2)
+      .replace(/("[^"]*")(\s*:)/g, '<span class="k">$1</span>$2')
+      .replace(/:\s*("[^"]*")/g, ': <span class="s">$1</span>')
+      .replace(/\b(\d+|true|false|null)\b/g, '<span class="n">$1</span>');
+    tout.innerHTML = pretty; tok.textContent = '● Valid';
+  } catch { tok.textContent = ''; }
+}
+document.getElementById('t-try').onclick = async () => {
+  const id = ++typing; tin.textContent = ''; tout.innerHTML = '<span class="hint">Formatting as it arrives…</span>'; tok.textContent = '';
+  if (reduce) { tin.textContent = SAMPLE; render(SAMPLE); return; }
+  for (let c = 1; c <= SAMPLE.length && id === typing; c++) { tin.textContent = SAMPLE.slice(0, c); render(SAMPLE.slice(0, c)); await sleep(22); }
+};
+document.getElementById('t-clear').onclick = () => { typing++; tin.innerHTML = '<span class="hint">Paste JSON here, or try an example</span>'; tout.innerHTML = '<span class="hint">Paste JSON on the left</span>'; tok.textContent = ''; };
+
+// ── 3: tagline ────────────────────────────────────────────────
+(async () => {
+  const tl = document.getElementById('tl'), words = ['json', 'yaml', 'sql', 'markdown', 'mermaid', 'xml'];
+  if (reduce) { tl.textContent = 'json'; return; }
+  for (let i = 0; ; i = (i + 1) % words.length) {
+    const w = words[i];
+    for (let c = 1; c <= w.length; c++) { tl.textContent = w.slice(0, c); await sleep(90); }
+    await sleep(1400);
+    for (let c = w.length; c >= 0; c--) { tl.textContent = w.slice(0, c); await sleep(45); }
+    await sleep(250);
+  }
+})();
+</script>
+</body>
+</html>

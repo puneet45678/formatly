@@ -2,6 +2,8 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { Keyboard } from "lucide-react";
+import { FORMATS } from "@/formats/registry";
+import { useTypewriter } from "@/hooks/useTypewriter";
 import { cn } from "@/lib/utils";
 import { ShortcutsDialog } from "./ShortcutsDialog";
 
@@ -39,6 +41,7 @@ export function TopBar() {
           {"{ }"}
         </span>
         <span className="text-[15px] font-semibold tracking-[-0.02em]">formatly</span>
+        <Tagline />
       </div>
       <nav aria-label="Site" className="flex items-center gap-2">
         <RoundButton label="Shortcuts" pill="Shortcuts  ?" onClick={() => setShortcutsOpen(true)}>
@@ -52,6 +55,27 @@ export function TopBar() {
       </nav>
       <ShortcutsDialog open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </header>
+  );
+}
+
+const FORMAT_WORDS = FORMATS.map((f) => f.label.toLowerCase());
+const FORMAT_SENTENCE = `Formats ${FORMATS.slice(0, -1)
+  .map((f) => f.label)
+  .join(", ")} and ${FORMATS[FORMATS.length - 1].label}`;
+
+/** "· format your json_" with the format name typing itself, cycling through all formats. */
+function Tagline() {
+  const word = useTypewriter(FORMAT_WORDS);
+  return (
+    <span data-testid="tagline" className="hidden items-center font-mono text-[13px] text-dim sm:flex">
+      {/* Screen readers get one plain sentence instead of letters appearing and disappearing. */}
+      <span className="sr-only">{FORMAT_SENTENCE}</span>
+      <span aria-hidden="true" className="flex items-center whitespace-pre">
+        {"· format your "}
+        <span className="text-k">{word}</span>
+        <span className="caret-blink ml-px inline-block h-3 w-1.5 bg-k" />
+      </span>
+    </span>
   );
 }
 

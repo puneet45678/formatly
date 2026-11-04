@@ -72,6 +72,8 @@ The user compared three layouts and chose **B: a format list in a side rail**. A
 - **See-through top bar.** No tint or blur, just the bottom hairline, so the grid runs under it.
 - **Format capsule (replaces the full-height sidebar).** The format menu is a floating capsule over the grid, vertically centered on the left. Closed (the default): a 50px capsule of format symbols, the selected one filled white, and a name pill appears beside a symbol on hover or keyboard focus. Open: the same capsule widens to 164px and shows each symbol with its name. A button at the top of the capsule or ⌘/Ctrl + \ toggles it, and the choice is remembered (`formatly:railCollapsed`). The panes make room for the capsule instead of being covered. Phones: the capsule is a floating bar at the bottom of the screen, symbols only.
 
+**Top bar (decided by the owner):** dark logo tile with blue `{ }` and the wordmark, followed by a typewriter tagline, "· format your json_", where the format name types, holds, erases and cycles through every format. The tagline stays still ("json") for reduced-motion users, reads as one plain sentence to screen readers, and is hidden below 640px. On the right, round icon buttons (Shortcuts; GitHub once the repo is public) with name pills; `?` opens the shortcuts.
+
 **Reading the output (decided by the owner):**
 - **Expand.** A button in the output header makes the output fill the workspace and hides the input (kept mounted, so nothing is lost). Esc or the same button returns. Works for every format.
 - **Mermaid zoom and pan.** Zoom out / 100% / zoom in / fit controls in the diagram's corner, wheel to zoom around the cursor, drag to pan. Diagrams open fitted to the pane but never above 100%.

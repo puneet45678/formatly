@@ -24,6 +24,19 @@ describe("TopBar", () => {
     expect(pill).toHaveAttribute("aria-hidden", "true");
   });
 
+  it("has a typewriter tagline that screen readers hear as one sentence", () => {
+    render(<TopBar />);
+    const tagline = screen.getByTestId("tagline");
+    expect(tagline).toHaveTextContent("format your");
+    expect(tagline.querySelector('[aria-hidden="true"]')).not.toBeNull();
+    expect(screen.getByText("Formats JSON, YAML, Mermaid, XML, SQL and Markdown")).toHaveClass("sr-only");
+  });
+
+  it("hides the tagline on narrow screens", () => {
+    render(<TopBar />);
+    expect(screen.getByTestId("tagline")).toHaveClass("hidden", "sm:flex");
+  });
+
   it("opens the shortcuts with the ? key", () => {
     render(<TopBar />);
     fireEvent.keyDown(document.body, { key: "?" });
