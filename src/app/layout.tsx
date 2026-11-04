@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { TopBar } from "@/components/TopBar";
 import KineticGrid from "@/components/ui/kinetic-grid";
+import { CONTENT_SECURITY_POLICY } from "@/lib/csp";
 import { WorkbenchProvider } from "@/state/WorkbenchContext";
 import "./globals.css";
 
@@ -16,6 +17,12 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}>
+      <head>
+        {/* Production only: the dev server needs eval and a WebSocket for hot reload. */}
+        {process.env.NODE_ENV === "production" && (
+          <meta httpEquiv="Content-Security-Policy" content={CONTENT_SECURITY_POLICY} />
+        )}
+      </head>
       <body className="flex h-dvh flex-col font-sans">
         <KineticGrid />
         <TopBar />
