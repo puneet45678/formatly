@@ -1,7 +1,7 @@
-import type { FormatId, FormatResult, FormatSettings } from "./types";
+import type { FormatId, FormatOutcome, FormatSettings } from "./types";
 
 export type WorkerRequest = { id: number; format: FormatId; input: string; settings: FormatSettings };
-export type WorkerResponse = { id: number; result: FormatResult };
+export type WorkerResponse = { id: number; result: FormatOutcome };
 
 /** The slice of a Web Worker the client uses, so tests can pass a fake. */
 export interface WorkerLike {
@@ -11,18 +11,31 @@ export interface WorkerLike {
   onerror: ((event: unknown) => void) | null;
 }
 
-/** A job older than this is treated as "probably a huge paste": a new request replaces its worker. */
-export const SUPERSEDE_AFTER_MS = 300;
+/**
+ * When a new request arrives, an older job still running past this is dropped
+ * by replacing its worker.
+ *
+ * The older job's result is thrown away either way (the newest request wins),
+ * so letting it finish costs its remaining time, while replacing the worker
+ * costs a respawn: measured at 20-50 ms in Chromium (new Worker + the cached
+ * formatter chunk, Markdown the slowest). A job that has already run this long
+ * is likely to run longer than a respawn takes, so replacing it is cheaper.
+ * Jobs younger than this are left to finish, since most inputs format in a few
+ * milliseconds.
+ *
+ * Typing is debounced by 300 ms, so this matters for requests that skip the
+ * debounce, such as switching format right after a large paste.
+ */
+export const SUPERSEDE_AFTER_MS = 50;
 /** A job that takes longer than this is given up on. */
 export const TIMEOUT_MS = 15_000;
 
-const failure = (message: string): FormatResult => ({ ok: false, error: { message, line: 1 } });
-const SUPERSEDED = failure("Superseded");
-const TIMED_OUT = failure("Formatting took too long (over 15 seconds)");
-const CRASHED = failure("The formatter stopped unexpectedly. Try again.");
+const CANCELLED: FormatOutcome = { kind: "cancelled" };
+const TIMED_OUT: FormatOutcome = { kind: "failed", reason: "timeout", message: "Formatting took too long (over 15 seconds)" };
+const CRASHED: FormatOutcome = { kind: "failed", reason: "crashed", message: "The formatter stopped unexpectedly" };
 
 type PendingJob = {
-  resolve: (result: FormatResult) => void;
+  resolve: (result: FormatOutcome) => void;
   startedAt: number;
   timer: ReturnType<typeof setTimeout>;
 };
@@ -35,19 +48,19 @@ type PendingJob = {
  * Instead, when a new request arrives and an old one has been running for a
  * while, we throw that worker away and start a fresh one.
  *
- * Results never reject: failures come back as `{ ok: false }` like any other
- * format error, so callers have a single path to handle.
+ * Results never reject: a timeout or crash comes back as `{ kind: "failed" }`
+ * and a dropped job as `{ kind: "cancelled" }`, so callers have one path to handle.
  */
 export function createWorkerClient(spawn: () => WorkerLike) {
   let worker: WorkerLike | null = null;
   let nextId = 1;
-  // Like a Dictionary<int, TaskCompletionSource<FormatResult>> of pending requests:
+  // Like a Dictionary<int, TaskCompletionSource<FormatOutcome>> of pending requests:
   // the worker's replies arrive later and carry only an id, so this is how we
   // find which caller's promise to resolve.
   const pending = new Map<number, PendingJob>();
 
   /** Resolves every waiting job with `result`. */
-  function settleAll(result: FormatResult) {
+  function settleAll(result: FormatOutcome) {
     for (const job of pending.values()) {
       clearTimeout(job.timer);
       job.resolve(result);
@@ -56,7 +69,7 @@ export function createWorkerClient(spawn: () => WorkerLike) {
   }
 
   /** Throws the current worker away (a new one is spawned on the next request) and settles all waiting jobs. */
-  function discardWorker(result: FormatResult) {
+  function discardWorker(result: FormatOutcome) {
     const old = worker;
     worker = null;
     old?.terminate();
@@ -83,15 +96,15 @@ export function createWorkerClient(spawn: () => WorkerLike) {
   }
 
   return {
-    run(format: FormatId, input: string, settings: FormatSettings): Promise<FormatResult> {
-      // If an earlier job is still running after a while, it is likely a huge input
-      // that the user has already typed past. Drop it rather than queue behind it.
+    run(format: FormatId, input: string, settings: FormatSettings): Promise<FormatOutcome> {
+      // An earlier job still running after a while is likely a big input the user
+      // has moved past. Drop it rather than queue behind it (see SUPERSEDE_AFTER_MS).
       const now = Date.now();
       const busy = [...pending.values()].some((job) => now - job.startedAt >= SUPERSEDE_AFTER_MS);
-      if (busy) discardWorker(SUPERSEDED);
+      if (busy) discardWorker(CANCELLED);
 
       const id = nextId++;
-      return new Promise<FormatResult>((resolve) => {
+      return new Promise<FormatOutcome>((resolve) => {
         const timer = setTimeout(() => {
           // We can't stop one job inside a worker, so a stuck job means replacing the worker.
           discardWorker(TIMED_OUT);
@@ -101,9 +114,9 @@ export function createWorkerClient(spawn: () => WorkerLike) {
       });
     },
 
-    /** Stops the worker. Jobs still waiting resolve as superseded. */
+    /** Stops the worker. Jobs still waiting resolve as cancelled. */
     dispose() {
-      discardWorker(SUPERSEDED);
+      discardWorker(CANCELLED);
     },
   };
 }

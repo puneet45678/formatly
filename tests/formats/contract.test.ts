@@ -22,21 +22,22 @@ describe.each(cases.map((c) => [c.f.id, c] as const))("formatter contract: %s", 
 
   it.skipIf(isStub)("formats its valid example", async () => {
     const result = await formatInput(f.id, f.examples.valid, settings);
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.output).not.toBe("");
+    expect(result.kind).toBe("ok");
+    if (result.kind === "ok") expect(result.output).not.toBe("");
   });
 
   it.skipIf(isStub)("formatting is stable", async () => {
     const first = await formatInput(f.id, f.examples.valid, settings);
-    if (!first.ok) throw new Error("valid example failed to format");
+    if (first.kind !== "ok") throw new Error("valid example failed to format");
     const second = await formatInput(f.id, first.output, settings);
-    expect(second).toEqual({ ok: true, output: first.output });
+    expect(second).toEqual({ kind: "ok", output: first.output });
   });
 
   it.skipIf(isStub || f.examples.invalid === "")("rejects its invalid example with a usable position", async () => {
     const result = await formatInput(f.id, f.examples.invalid, settings);
-    expect(result.ok).toBe(false);
-    if (result.ok) return;
+    // A syntax error with a position, not a crash or timeout.
+    expect(result.kind).toBe("invalid");
+    if (result.kind !== "invalid") return;
     const lineCount = f.examples.invalid.split(/\r\n|\r|\n/).length;
     expect(result.error.message).not.toBe("");
     expect(result.error.line).toBeGreaterThanOrEqual(1);

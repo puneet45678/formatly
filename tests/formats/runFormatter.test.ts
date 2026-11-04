@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { FormatResult } from "@/formats/types";
+import type { FormatOutcome } from "@/formats/types";
 
 // The two paths runFormatter chooses between, replaced with spies. vi.hoisted
 // runs before the (hoisted) vi.mock calls below, so the mocks can use them.
@@ -15,8 +15,8 @@ vi.mock("@/formats/formatInput", () => ({ formatInput: mocks.formatInput }));
 
 import { runFormatter } from "@/formats/runFormatter";
 
-const fromWorker: FormatResult = { ok: true, output: "from worker" };
-const fromPage: FormatResult = { ok: true, output: "from page" };
+const fromWorker: FormatOutcome = { kind: "ok", output: "from worker" };
+const fromPage: FormatOutcome = { kind: "ok", output: "from page" };
 
 afterEach(() => {
   vi.unstubAllGlobals();

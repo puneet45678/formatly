@@ -56,11 +56,20 @@ describe("formatJson", () => {
     expect(formatJson(doc).ok).toBe(true);
   });
 
-  it("rejects absurd nesting with a clear message", () =>
+  it("rejects absurd nesting at the bracket that crosses the limit", () =>
+    // The first MAX_JSON_DEPTH brackets are allowed; the next one (column MAX_JSON_DEPTH + 1) is not.
     expect(formatJson("[".repeat(100_000) + "]".repeat(100_000))).toEqual({
       ok: false,
-      error: { message: "This is nested too deeply to format", line: 1 },
+      error: { message: "This is nested too deeply to format", line: 1, column: MAX_JSON_DEPTH + 1 },
     }));
+
+  it("points at the right line when deep nesting starts further down", () => {
+    const input = '{\n  "a":\n' + "[".repeat(MAX_JSON_DEPTH + 1) + "]".repeat(MAX_JSON_DEPTH + 1) + "\n}";
+    expect(formatJson(input)).toEqual({
+      ok: false,
+      error: { message: "This is nested too deeply to format", line: 3, column: MAX_JSON_DEPTH },
+    });
+  });
 
   it("allows normal nesting", () =>
     expect(formatJson("[".repeat(MAX_JSON_DEPTH) + "]".repeat(MAX_JSON_DEPTH)).ok).toBe(true));

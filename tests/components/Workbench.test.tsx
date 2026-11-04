@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditorView } from "@codemirror/view";
-import type { FormatId, FormatResult, FormatSettings } from "@/formats/types";
+import type { FormatId, FormatOutcome, FormatSettings } from "@/formats/types";
 import { WorkbenchProvider } from "@/state/WorkbenchContext";
 
-const runFormatter = vi.fn<(id: FormatId, input: string, settings: FormatSettings) => Promise<FormatResult>>();
+const runFormatter = vi.fn<(id: FormatId, input: string, settings: FormatSettings) => Promise<FormatOutcome>>();
 vi.mock("@/formats/runFormatter", () => ({ runFormatter: (...args: Parameters<typeof runFormatter>) => runFormatter(...args) }));
 
 import { Workbench } from "@/components/Workbench";
@@ -31,7 +31,7 @@ function typeInput(text: string) {
 
 beforeEach(() => {
   runFormatter.mockReset();
-  runFormatter.mockImplementation(async (_id, input) => ({ ok: true, output: `formatted:${input}` }));
+  runFormatter.mockImplementation(async (_id, input) => ({ kind: "ok", output: `formatted:${input}` }));
 });
 
 describe("Workbench", () => {
@@ -53,7 +53,7 @@ describe("Workbench", () => {
   });
 
   it("shows the error with line and column", async () => {
-    runFormatter.mockResolvedValue({ ok: false, error: { message: "Unexpected token", line: 3, column: 5 } });
+    runFormatter.mockResolvedValue({ kind: "invalid", error: { message: "Unexpected token", line: 3, column: 5 } });
     renderWorkbench("json");
     typeInput("a\nb\nc");
     expect(await within(outputPane()).findByText("Line 3, column 5: Unexpected token")).toBeInTheDocument();
@@ -62,7 +62,7 @@ describe("Workbench", () => {
   });
 
   it("announces status and errors to screen readers", async () => {
-    runFormatter.mockResolvedValue({ ok: false, error: { message: "Bad", line: 2 } });
+    runFormatter.mockResolvedValue({ kind: "invalid", error: { message: "Bad", line: 2 } });
     renderWorkbench("json");
     typeInput("a\nb");
     const message = await within(outputPane()).findByText("Line 2: Bad");
@@ -71,10 +71,35 @@ describe("Workbench", () => {
   });
 
   it("shows line only when column is missing", async () => {
-    runFormatter.mockResolvedValue({ ok: false, error: { message: "Bad", line: 3 } });
+    runFormatter.mockResolvedValue({ kind: "invalid", error: { message: "Bad", line: 3 } });
     renderWorkbench("json");
     typeInput("a\nb\nc");
     expect(await within(outputPane()).findByText("Line 3: Bad")).toBeInTheDocument();
+  });
+
+  // The bug behind this change: a timeout used to arrive as an error "at line 1",
+  // so the editor marked line 1 as if it were wrong.
+  it("does not mark any input line when formatting times out", async () => {
+    runFormatter.mockResolvedValue({ kind: "failed", reason: "timeout", message: "Formatting took too long (over 15 seconds)" });
+    renderWorkbench("json");
+    typeInput("a\nb\nc");
+    expect(await within(outputPane()).findByText("Formatting took too long (over 15 seconds)")).toBeInTheDocument();
+    expect(within(outputPane()).getByText("Couldn't format")).toBeInTheDocument();
+    expect(within(outputPane()).queryByText("Error")).toBeNull();
+    expect(within(outputPane()).queryByText(/^Line \d/)).toBeNull();
+    expect(within(outputPane()).queryByRole("button", { name: "Try again" })).toBeNull();
+    expect(inputPane().querySelector(".cm-error-line")).toBeNull();
+  });
+
+  it("offers Try again after a crash, and shows the result when it works", async () => {
+    runFormatter.mockResolvedValueOnce({ kind: "failed", reason: "crashed", message: "The formatter stopped unexpectedly" });
+    renderWorkbench("json");
+    typeInput("{}");
+    const retry = await within(outputPane()).findByRole("button", { name: "Try again" });
+    expect(inputPane().querySelector(".cm-error-line")).toBeNull();
+    fireEvent.click(retry);
+    expect(await within(outputPane()).findByText("Valid")).toBeInTheDocument();
+    expect(runFormatter).toHaveBeenCalledTimes(2);
   });
 
   it("Clear empties the input", async () => {
@@ -109,7 +134,7 @@ describe("Workbench", () => {
   });
 
   it("renders a diagram for mermaid", async () => {
-    runFormatter.mockResolvedValue({ ok: true, output: '<svg data-testid="d"></svg>' });
+    runFormatter.mockResolvedValue({ kind: "ok", output: '<svg data-testid="d"></svg>' });
     renderWorkbench("mermaid");
     typeInput("graph TD; A-->B");
     expect(await within(outputPane()).findByTestId("d")).toBeInTheDocument();

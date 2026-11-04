@@ -89,7 +89,8 @@ export function OutputPane({ format, state, expanded = false, onToggleExpand }: 
         <div className="flex items-center gap-2">
           <span aria-live="polite">
             {state.status === "ok" && <span className="status status-ok">Valid</span>}
-            {state.status === "error" && <span className="status status-error">Error</span>}
+            {state.status === "invalid" && <span className="status status-error">Error</span>}
+            {state.status === "failed" && <span className="status status-failed">Couldn&apos;t format</span>}
           </span>
           <OutputActions format={format} state={state} />
           {onToggleExpand && (
@@ -115,11 +116,24 @@ function OutputBody({ format, state, view }: OutputPaneProps & { view: OutputVie
   switch (state.status) {
     case "empty":
       return <p className="p-3.5 text-[12.5px] text-dim">Paste {format.label} on the left</p>;
-    case "error":
+    case "invalid":
       return (
         <p aria-live="polite" className="p-3.5 font-mono text-xs text-err">
           {describeError(state.error)}
         </p>
+      );
+    case "failed":
+      // Not a problem at any line of the input, so no "Line N" and no red.
+      return (
+        <div aria-live="polite" className="flex flex-col items-start gap-2 p-3.5 text-xs text-muted">
+          <p>{state.message}</p>
+          {state.reason === "timeout" && <p className="text-dim">Large inputs can be slow to format. Try a smaller part of it.</p>}
+          {state.retry && (
+            <button type="button" className="chip" onClick={state.retry}>
+              Try again
+            </button>
+          )}
+        </div>
       );
     case "ok": {
       if (format.output === "diagram") return <DiagramView svg={state.output} />;

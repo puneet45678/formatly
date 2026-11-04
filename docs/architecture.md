@@ -38,10 +38,23 @@ docs/architecture.md               this file
 
 `runFormatter(id, input, settings)` is the only door the UI uses. It looks at the definition's `runsOn`:
 
-- **`"worker"`** (JSON, YAML, SQL, XML, Markdown): the request goes to `workerClient`, which posts it to a Web Worker (`format.worker.ts`). The worker calls `formatInput` and replies. A big paste therefore can't freeze typing. The client tags each request with an id, and if a slow job is still running when a newer request arrives it throws that worker away and starts a fresh one. A job that takes over 15 seconds, or a worker that crashes, comes back as a normal `{ ok: false }` error, so callers never see a rejected promise.
+- **`"worker"`** (JSON, YAML, SQL, XML, Markdown): the request goes to `workerClient`, which posts it to a Web Worker (`format.worker.ts`). The worker calls `formatInput` and replies. A big paste therefore can't freeze typing. The client tags each request with an id, and if a job has been running for more than 50 ms when a newer request arrives, it throws that worker away and starts a fresh one (`SUPERSEDE_AFTER_MS`). The old job's result would be discarded anyway, and a respawn measured 20–50 ms in Chromium, so replacing the worker is cheaper than waiting. A job that takes over 15 seconds or a worker that crashes comes back as `{ kind: "failed" }`, and a replaced job as `{ kind: "cancelled" }`, so callers never see a rejected promise.
 - **`"main"`** (Mermaid only): it needs the DOM to render, which a worker doesn't have, so `formatInput` runs on the page. The same happens for every format when the browser has no `Worker` (and in tests).
 
-Either way the last step is `formatInput`: it loads the formatter with `definition.load()`, cleans the settings, runs it, and turns any thrown exception into a `{ ok: false }` result. A formatter can therefore just return errors or even throw. Errors carry a 1-based `line` and an optional `column`; use `formatError(message, line, column)` to build one, and `positionAt(text, offset)` to turn a character offset into a line and column.
+Either way the last step is `formatInput`: it loads the formatter with `definition.load()`, cleans the settings and runs it. A formatter returns a `FormatResult`: its output, or a syntax error with a 1-based `line` and optional `column` (build one with `formatError(message, line, column)`; `positionAt(text, offset)` turns a character offset into a line and column). A formatter can also just throw.
+
+### Outcomes: invalid input is not the same as a failure
+
+`formatInput`, the worker and `runFormatter` return a `FormatOutcome`, which keeps apart things the UI must treat differently:
+
+| `kind` | Meaning | Has a position? | UI |
+| --- | --- | --- | --- |
+| `ok` | Formatted output | — | Output, "Valid" |
+| `invalid` | The formatter found a syntax error | Yes | Red "Error", "Line N", the line marked in the editor |
+| `failed` | We couldn't finish: `timeout`, `crashed`, `too-complex` (stack overflow), `internal` (a throw or a failed download) | No | Neutral "Couldn't format"; "Try again" only for `crashed` and `internal` |
+| `cancelled` | A newer request replaced this one | — | Nothing changes |
+
+Only `invalid` carries a line, so a timeout or crash can never mark line 1 of the input as if it were wrong.
 
 ## Dependency rules
 
@@ -85,4 +98,4 @@ Three checks keep the rules above true over time. All run in CI (`.github/workfl
 - **Performance budgets** (`tests/perf/`, run with `npm run test:perf`) format generated 256 KB to 1 MB inputs in plain Node and fail if a formatter gets about 3x slower than measured. They are regression tripwires, not product targets; measured numbers are in the test file. A timeout cannot interrupt synchronous code, so the cheap JSON guard runs first with `bail: 1`, and the CI job's `timeout-minutes` is the outer kill switch (the same reason `workerClient` terminates its worker).
 - **Content Security Policy** (`src/lib/csp.ts`, added as a `<meta>` tag in production builds). `connect-src 'self'` is what makes "nothing you paste leaves the page" enforced by the browser rather than promised. Limits of a `<meta>` policy on a static export: `script-src` needs `'unsafe-inline'` for Next's bootstrap scripts (no server, so no nonces); Next puts its own script tags before the tag, so their fetches are not covered; `frame-ancestors` and reporting are ignored. A policy sent as an HTTP header by the host would close those gaps. `img-src` allows `https:` only for Markdown preview's click-to-load remote images.
 
-Known performance limits (from the measurements, not yet fixed): `xml-formatter` is quadratic (about 3 s at 1 MB), SQL and Markdown grow faster than linearly, and Markdown takes about 13 s at 1 MB, close to the worker's 15 s timeout. Every format except JSON takes more than 300 ms at 256 KB, which is the worker client's supersede threshold.
+Known performance limits (from the measurements, not yet fixed): `xml-formatter` is quadratic (about 3 s at 1 MB), SQL and Markdown grow faster than linearly, and Markdown takes about 13 s at 1 MB, close to the worker's 15 s timeout. These are what limit live formatting of large inputs: no cancellation policy can show fresh output faster than the formatter produces it.

@@ -1,6 +1,6 @@
 import { formatInput } from "./formatInput";
 import { getFormat } from "./registry";
-import type { FormatId, FormatResult, FormatSettings } from "./types";
+import type { FormatId, FormatOutcome, FormatSettings } from "./types";
 import { createWorkerClient } from "./workerClient";
 import type { WorkerLike } from "./workerClient";
 
@@ -19,7 +19,7 @@ const workerClient = createWorkerClient(
  * that need the DOM (`runsOn: "main"`) run on the page, and so does everything
  * when the browser has no Worker (and in tests).
  */
-export async function runFormatter(id: FormatId, input: string, settings: FormatSettings): Promise<FormatResult> {
+export async function runFormatter(id: FormatId, input: string, settings: FormatSettings): Promise<FormatOutcome> {
   if (getFormat(id).runsOn === "worker" && typeof Worker !== "undefined") {
     return workerClient.run(id, input, settings);
   }
