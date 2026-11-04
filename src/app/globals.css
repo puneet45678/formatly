@@ -43,22 +43,16 @@ body {
   color: var(--text);
 }
 
-/* Next.js-style grid that fades out toward the edges. */
-.grid-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
+/* Background grid (see components/ui/kinetic-grid.tsx). The CSS lines show
+   until the canvas draws over them; the fade sits on top of both. */
+.grid-lines {
   background-image:
     linear-gradient(to right, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
     linear-gradient(to bottom, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
   background-size: 44px 44px;
 }
 
-.grid-backdrop::after {
-  content: "";
-  position: absolute;
-  inset: 0;
+.grid-fade {
   background: radial-gradient(ellipse at 50% 0%, transparent 30%, var(--bg) 85%);
 }
 
