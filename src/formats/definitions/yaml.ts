@@ -13,5 +13,5 @@ export const yaml = {
     valid: "server:\n    port: 8080\n    tags: ['a', \"b\"]  # note\n",
     invalid: "a: 1\nc: [1, 2\n",
   },
-  load: () => import("../formatters/echo").then((m) => m.echo),
+  load: () => import("../formatters/yaml").then((m) => m.formatYaml),
 } as const satisfies FormatDefinition;

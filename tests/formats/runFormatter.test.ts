@@ -1,10 +1,19 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { runFormatter } from "@/formats/runFormatter";
-import { PLACEHOLDER_SVG } from "@/formats/formatters/echo";
+import { echo, PLACEHOLDER_SVG } from "@/formats/formatters/echo";
+import { yaml } from "@/formats/definitions/yaml";
 
 describe("runFormatter (stub formatters until each real one lands)", () => {
   it("echoes text formats that still use the stand-in", async () => {
-    await expect(runFormatter("yaml", "a: 1", {})).resolves.toEqual({ ok: true, output: "a: 1" });
+    // Point yaml's load at the echo stand-in, so this test doesn't depend on
+    // which formats are still stubs. Restored afterwards.
+    const load = vi.spyOn(yaml, "load").mockResolvedValue(echo);
+    try {
+      await expect(runFormatter("yaml", "a: 1", {})).resolves.toEqual({ ok: true, output: "a: 1" });
+      expect(load).toHaveBeenCalled();
+    } finally {
+      load.mockRestore();
+    }
   });
 
   it("returns the placeholder diagram for mermaid", async () => {
