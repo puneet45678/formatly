@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { TopBar } from "@/components/TopBar";
+import { WorkbenchProvider } from "@/state/WorkbenchContext";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -17,7 +18,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex h-dvh flex-col font-sans">
         <div className="grid-backdrop" aria-hidden="true" />
         <TopBar />
-        {children}
+        <WorkbenchProvider>{children}</WorkbenchProvider>
       </body>
     </html>
   );
