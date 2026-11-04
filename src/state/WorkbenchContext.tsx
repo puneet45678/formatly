@@ -1,16 +1,17 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { FORMATS, SQL_DIALECTS } from "@/formats/registry";
-import type { FormatId, SqlDialect } from "@/formats/types";
-import { STORAGE_KEYS, readStored, writeStored } from "@/lib/storage";
+import { FORMATS, defaultSettings, sanitizeSettings } from "@/formats/registry";
+import type { FormatId, FormatSettings } from "@/formats/types";
+import { STORAGE_KEYS, readStored, settingsKey, writeStored } from "@/lib/storage";
 
 interface WorkbenchState {
   /** What the user typed for each format. Lives in memory only. */
   inputs: Record<FormatId, string>;
   setInput: (id: FormatId, text: string) => void;
-  sqlDialect: SqlDialect;
-  setSqlDialect: (dialect: SqlDialect) => void;
+  /** Each format's chosen settings (e.g. the SQL dialect). Remembered per format. */
+  settings: Record<FormatId, FormatSettings>;
+  setSetting: (id: FormatId, key: string, value: string) => void;
   /** Format capsule closed to symbols only (desktop; phones always show symbols). */
   railCollapsed: boolean;
   toggleRail: () => void;
@@ -18,24 +19,36 @@ interface WorkbenchState {
 
 const WorkbenchContext = createContext<WorkbenchState | null>(null);
 
-const emptyInputs = Object.fromEntries(FORMATS.map((f) => [f.id, ""])) as Record<FormatId, string>;
+/** One value per format, e.g. an empty input for each. */
+function byFormat<T>(make: (id: FormatId) => T): Record<FormatId, T> {
+  return Object.fromEntries(FORMATS.map((f) => [f.id, make(f.id)])) as Record<FormatId, T>;
+}
 
-function isSqlDialect(value: unknown): value is SqlDialect {
-  return SQL_DIALECTS.some((d) => d.id === value);
+const emptyInputs = byFormat(() => "");
+const initialSettings = byFormat(defaultSettings);
+
+/** A format's stored settings, falling back to defaults for anything missing, unknown or corrupt. */
+function readStoredSettings(id: FormatId): FormatSettings {
+  const stored = readStored(settingsKey(id));
+  if (stored === null) return defaultSettings(id);
+  try {
+    return sanitizeSettings(id, JSON.parse(stored));
+  } catch {
+    return defaultSettings(id); // not valid JSON
+  }
 }
 
 export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const [inputs, setInputs] = useState(emptyInputs);
-  const [sqlDialect, setSqlDialectState] = useState<SqlDialect>("sql");
+  const [settings, setSettings] = useState(initialSettings);
   // The format capsule starts closed (symbols only) until the user opens it.
   const [railCollapsed, setRailCollapsed] = useState(true);
 
   // Read after mount so the first render matches the static HTML.
   // (Reading during render would make the server and browser HTML differ.)
   useEffect(() => {
-    const storedDialect = readStored(STORAGE_KEYS.sqlDialect);
     /* eslint-disable react-hooks/set-state-in-effect -- one-time sync from browser storage after hydration */
-    if (isSqlDialect(storedDialect)) setSqlDialectState(storedDialect);
+    setSettings(byFormat(readStoredSettings));
     if (readStored(STORAGE_KEYS.railCollapsed) === "false") setRailCollapsed(false);
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
@@ -64,14 +77,19 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     setInputs((prev) => ({ ...prev, [id]: text }));
   }, []);
 
-  const setSqlDialect = useCallback((dialect: SqlDialect) => {
-    setSqlDialectState(dialect);
-    writeStored(STORAGE_KEYS.sqlDialect, dialect);
+  const setSetting = useCallback((id: FormatId, key: string, value: string) => {
+    setSettings((prev) => {
+      // Sanitizing drops a key or value the format doesn't define.
+      const next = sanitizeSettings(id, { ...prev[id], [key]: value });
+      // Writing the same value twice (React may re-run this in dev) is harmless.
+      writeStored(settingsKey(id), JSON.stringify(next));
+      return { ...prev, [id]: next };
+    });
   }, []);
 
   const value = useMemo(
-    () => ({ inputs, setInput, sqlDialect, setSqlDialect, railCollapsed, toggleRail }),
-    [inputs, setInput, sqlDialect, setSqlDialect, railCollapsed, toggleRail],
+    () => ({ inputs, setInput, settings, setSetting, railCollapsed, toggleRail }),
+    [inputs, setInput, settings, setSetting, railCollapsed, toggleRail],
   );
 
   return <WorkbenchContext.Provider value={value}>{children}</WorkbenchContext.Provider>;

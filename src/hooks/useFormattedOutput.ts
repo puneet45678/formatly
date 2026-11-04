@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { runFormatter } from "@/formats/runFormatter";
-import type { FormatError, FormatId, FormatOptions } from "@/formats/types";
+import type { FormatError, FormatId, FormatSettings } from "@/formats/types";
 
 /** How long to wait after the last keystroke before formatting. */
 export const FORMAT_DEBOUNCE_MS = 300;
@@ -19,7 +19,7 @@ const EMPTY: OutputState = { status: "empty" };
  * Results that arrive after the input or format has changed are dropped,
  * so a slow old result can never overwrite a newer one.
  */
-export function useFormattedOutput(id: FormatId, input: string, options?: FormatOptions): OutputState {
+export function useFormattedOutput(id: FormatId, input: string, settings: FormatSettings): OutputState {
   // Each result remembers which format produced it, so switching formats
   // never shows the old format's output in the new pane.
   const [state, setState] = useState<{ id: FormatId; value: OutputState }>({ id, value: EMPTY });
@@ -27,7 +27,9 @@ export function useFormattedOutput(id: FormatId, input: string, options?: Format
   // null until the first run. Switching routes remounts the page, so a
   // fresh mount means the user just opened (or came back to) this format.
   const lastFormat = useRef<FormatId | null>(null);
-  const sqlDialect = options?.sqlDialect;
+  // Callers may pass a new but equal settings object on every render. Comparing
+  // the JSON text instead of the object means only a real change formats again.
+  const settingsJson = JSON.stringify(settings);
 
   useEffect(() => {
     // Any change makes in-flight results stale.
@@ -47,7 +49,7 @@ export function useFormattedOutput(id: FormatId, input: string, options?: Format
     const timer = setTimeout(async () => {
       let next: OutputState;
       try {
-        const result = await runFormatter(id, input, sqlDialect ? { sqlDialect } : undefined);
+        const result = await runFormatter(id, input, JSON.parse(settingsJson) as FormatSettings);
         next = result.ok ? { status: "ok", output: result.output } : { status: "error", error: result.error };
       } catch (err) {
         next = { status: "error", error: { message: err instanceof Error ? err.message : String(err), line: 1 } };
@@ -56,7 +58,7 @@ export function useFormattedOutput(id: FormatId, input: string, options?: Format
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [id, input, sqlDialect]);
+  }, [id, input, settingsJson]);
 
   if (isBlank(input) || state.id !== id) return EMPTY;
   return state.value;

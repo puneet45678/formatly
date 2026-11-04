@@ -1,21 +1,27 @@
+import { formatInput } from "./formatInput";
 import { getFormat } from "./registry";
-import type { FormatId, FormatOptions, FormatResult } from "./types";
+import type { FormatId, FormatResult, FormatSettings } from "./types";
+import { createWorkerClient } from "./workerClient";
+import type { WorkerLike } from "./workerClient";
 
-export const PLACEHOLDER_SVG =
-  '<svg xmlns="http://www.w3.org/2000/svg" width="320" height="120" viewBox="0 0 320 120">' +
-  '<rect x="1" y="1" width="318" height="118" rx="10" fill="#111" stroke="#232323"/>' +
-  '<text x="160" y="66" text-anchor="middle" fill="#8f8f8f" font-family="sans-serif" font-size="14">' +
-  "Diagram preview (phase 2)</text></svg>";
+// One client for the whole page. Creating it is cheap: the Worker itself is only
+// constructed (by the callback) the first time a format is run, never at import.
+const workerClient = createWorkerClient(
+  // The cast is needed because the real Worker's onmessage takes a full MessageEvent,
+  // while WorkerLike only asks for `{ data }` (which is all the client reads).
+  () => new Worker(new URL("./format.worker.ts", import.meta.url), { type: "module" }) as unknown as WorkerLike,
+);
 
 /**
  * The single place where formatting happens. Every part of the UI calls this.
  *
- * Phase 1 stub: text formats echo the input and Mermaid returns a placeholder.
- * Phase 2 replaces this body with real formatters running in a Web Worker,
- * keeping the same signature.
+ * Text formats run in a Web Worker so a big paste can't freeze typing. Formats
+ * that need the DOM (`runsOn: "main"`) run on the page, and so does everything
+ * when the browser has no Worker (and in tests).
  */
-export async function runFormatter(id: FormatId, input: string, options?: FormatOptions): Promise<FormatResult> {
-  void options;
-  if (getFormat(id).outputKind === "diagram") return { ok: true, output: PLACEHOLDER_SVG };
-  return { ok: true, output: input };
+export async function runFormatter(id: FormatId, input: string, settings: FormatSettings): Promise<FormatResult> {
+  if (getFormat(id).runsOn === "worker" && typeof Worker !== "undefined") {
+    return workerClient.run(id, input, settings);
+  }
+  return formatInput(id, input, settings);
 }
