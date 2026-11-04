@@ -26,5 +26,5 @@ export const sql = {
     valid: "select id, name from users where active = 1 order by name",
     invalid: "select *\nfrom t where (",
   },
-  load: () => import("../formatters/echo").then((m) => m.echo),
+  load: () => import("../formatters/sql").then((m) => m.formatSql),
 } as const satisfies FormatDefinition;
