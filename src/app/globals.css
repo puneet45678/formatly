@@ -1,26 +1,67 @@
 @import "tailwindcss";
 
+/* Design tokens, copied from docs/superpowers/specs/layout-b-mockup.html */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #0a0a0a;
+  --page: #050505;
+  --pane: rgba(17, 17, 17, 0.85);
+  --line: #232323;
+  --line2: #1a1a1a;
+  --text: #ededed;
+  --muted: #8f8f8f;
+  --dim: #5c5c5c;
+  --k: #7dd3fc;
+  --s: #a7f3d0;
+  --n: #fcd34d;
+  --p: #6b7280;
+  --ok: #4ade80;
+  --err: #f87171;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-page: var(--page);
+  --color-pane: var(--pane);
+  --color-line: var(--line);
+  --color-line2: var(--line2);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-dim: var(--dim);
+  --color-k: var(--k);
+  --color-ok: var(--ok);
+  --color-err: var(--err);
+  --font-sans: var(--font-inter);
+  --font-mono: var(--font-jetbrains-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* Next.js-style grid that fades out toward the edges. */
+.grid-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.055) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+
+.grid-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 0%, transparent 30%, var(--bg) 85%);
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
 }
