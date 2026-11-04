@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Style comparison</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#050505;color:#ededed;font-family:Inter,system-ui,sans-serif;padding:36px 24px 80px}
+  .page{max-width:1180px;margin:0 auto}
+  .intro h1{font-size:22px;font-weight:600;letter-spacing:-.01em}
+  .intro p{color:#8f8f8f;font-size:14px;margin-top:6px;line-height:1.55}
+  .block{margin-top:44px}
+  .bh{display:flex;align-items:baseline;gap:12px;margin:0 2px 12px;flex-wrap:wrap}
+  .bh .tag{font:600 12px Inter;background:#1f1f1f;border:1px solid #333;border-radius:6px;padding:2px 8px}
+  .bh h2{font-size:15px;font-weight:600}
+  .bh span{color:#8f8f8f;font-size:13px}
+  .err-row{margin-top:10px}
+  .err-row .cap{font-size:11px;color:#5c5c5c;text-transform:uppercase;letter-spacing:.08em;margin:0 2px 6px}
+  @keyframes blink{50%{opacity:0}}
+  @media (prefers-reduced-motion:reduce){.cursor{animation:none!important}}
+
+  /* ============ 1. CURRENT ============ */
+  .cur{--bg:#0a0a0a;--line:#232323;--line2:#1a1a1a;--text:#ededed;--muted:#8f8f8f;--dim:#5c5c5c;--k:#7dd3fc;--s:#a7f3d0;--n:#fcd34d;--p:#6b7280}
+  .cur .app{position:relative;height:420px;border-radius:14px;overflow:hidden;border:1px solid var(--line);background-color:var(--bg);
+    background-image:linear-gradient(to right,rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.055) 1px,transparent 1px);background-size:44px 44px}
+  .cur .app::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,transparent 30%,var(--bg) 85%)}
+  .cur .app>*{position:relative;z-index:1}
+  .cur .nav{display:flex;align-items:center;justify-content:space-between;padding:14px 22px;border-bottom:1px solid var(--line2);background:rgba(10,10,10,.6)}
+  .cur .logo{display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px}
+  .cur .logo i{width:18px;height:18px;border-radius:5px;background:linear-gradient(135deg,#fff,#777)}
+  .cur .navlinks{color:var(--muted);font-size:12.5px;display:flex;gap:18px}
+  .cur .body{display:flex;height:calc(100% - 49px)}
+  .cur .rail{width:150px;border-right:1px solid var(--line2);padding:14px 10px;background:rgba(10,10,10,.6);display:flex;flex-direction:column;gap:2px}
+  .cur .lbl{font-size:10px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase;padding:4px 10px 8px}
+  .cur .ri{font-size:12.5px;color:var(--muted);padding:7px 10px;border-radius:7px;display:flex;gap:9px}
+  .cur .ri em{font-style:normal;font:10px 'JetBrains Mono';color:var(--dim);width:22px;padding-top:2px}
+  .cur .ri.on{background:#1c1c1c;color:var(--text)} .cur .ri.on em{color:var(--k)}
+  .cur .main{flex:1;padding:18px;display:grid;grid-template-columns:1fr 1fr;gap:14px;min-width:0}
+  .cur .pane{background:rgba(17,17,17,.85);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;overflow:hidden}
+  .cur .ph{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;border-bottom:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+  .cur .ph b{color:var(--text);font-weight:500}
+  .cur .code{font:12px/1.65 'JetBrains Mono',monospace;padding:12px 14px;color:#cfcfcf;white-space:pre;overflow:hidden;flex:1}
+  .cur .ln{color:#3f3f3f;display:inline-block;width:22px}
+  .cur .k{color:var(--k)} .cur .s{color:var(--s)} .cur .n{color:var(--n)} .cur .p{color:var(--p)}
+  .cur .chip{font-size:11px;border:1px solid var(--line);border-radius:6px;padding:3px 8px;color:var(--muted)}
+  .cur .ok{color:#4ade80;font-size:11px;display:flex;align-items:center;gap:6px}
+  .cur .ok::before{content:"";width:6px;height:6px;border-radius:50%;background:#4ade80}
+  .cur .errbox{border:1px solid var(--line);border-radius:10px;background:#111;padding:10px 14px;display:flex;gap:12px;align-items:center;font-size:12px}
+  .cur .errbox .dot{color:#f87171;display:flex;align-items:center;gap:6px}
+  .cur .errbox .dot::before{content:"";width:6px;height:6px;border-radius:50%;background:#f87171}
+  .cur .errbox code{font:12px 'JetBrains Mono';color:#f87171}
+
+  /* ============ 2. HYBRID ============ */
+  .hyb{--bg:#000;--ink:#66ff66;--muted:#58ca58;--rule:#1f3a1f;--em:#fff;--dim:#3d7a3d;
+       --k:#7dd3fc;--s:#a7f3d0;--n:#fcd34d;--p:#6b7280;--err:#f87171;font-family:'IBM Plex Mono',monospace}
+  .hyb .app{position:relative;height:420px;overflow:hidden;border:1px solid var(--rule);background-color:var(--bg);
+    background-image:linear-gradient(to right,rgba(102,255,102,.06) 1px,transparent 1px),linear-gradient(to bottom,rgba(102,255,102,.06) 1px,transparent 1px);background-size:44px 44px}
+  .hyb .app::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 50% 0%,transparent 30%,#000 85%)}
+  .hyb .app>*{position:relative;z-index:1}
+  .hyb .nav{display:flex;align-items:center;justify-content:space-between;padding:12px 2ch;border-bottom:1px solid var(--rule);background:#000;font-size:13px}
+  .hyb .logo{color:var(--em);font-weight:500}
+  .hyb .logo span{color:var(--ink)}
+  .hyb .navlinks{display:flex;gap:3ch;color:var(--muted)}
+  .hyb .body{display:flex;height:calc(100% - 45px)}
+  .hyb .rail{width:19ch;border-right:1px solid var(--rule);padding:12px 0;background:#000;font-size:13px}
+  .hyb .lbl{color:var(--dim);padding:0 2ch 8px}
+  .hyb .ri{display:flex;gap:1ch;padding:4px 2ch;color:var(--muted)}
+  .hyb .ri em{font-style:normal;color:var(--dim);width:2ch}
+  .hyb .ri.on{background:var(--ink);color:#000;font-weight:500}
+  .hyb .ri.on em{color:#000}
+  .hyb .main{flex:1;padding:16px 2ch;display:grid;grid-template-columns:1fr 1fr;gap:3ch;min-width:0}
+  .hyb .pane{background:rgba(0,0,0,.88);border:1px solid var(--rule);display:flex;flex-direction:column;overflow:hidden}
+  .hyb .ph{display:flex;align-items:center;justify-content:space-between;padding:8px 1ch 8px 2ch;border-bottom:1px solid var(--rule);font-size:12.5px;color:var(--muted)}
+  .hyb .ph b{color:var(--em);font-weight:500}
+  .hyb .acts{display:flex;gap:1ch;align-items:center}
+  .hyb .act{color:var(--ink);padding:1px 2px}
+  .hyb .act:hover{background:var(--ink);color:#000}
+  .hyb .act.focus{outline:1px solid var(--em);outline-offset:1px}
+  .hyb .code{font:13px/1.65 'IBM Plex Mono',monospace;padding:12px 2ch 12px 0;color:#d4d4d4;white-space:pre;overflow:hidden;flex:1}
+  .hyb .ln{color:var(--dim);display:inline-block;width:4ch;text-align:right;margin-right:2ch}
+  .hyb .k{color:var(--k)} .hyb .s{color:var(--s)} .hyb .n{color:var(--n)} .hyb .p{color:var(--p)}
+  .hyb .ok{color:var(--ink)}
+  .hyb .cursor{display:inline-block;width:1ch;height:1.1em;background:var(--ink);vertical-align:text-bottom;animation:blink 1.2s steps(1) infinite}
+  .hyb .errbox{border:1px solid var(--rule);background:#000;padding:8px 2ch;display:flex;gap:2ch;align-items:center;font-size:12.5px}
+  .hyb .errbox .tag{color:var(--err)}
+  .hyb .errbox code{font:inherit;color:var(--err)}
+
+  /* ============ 3. FULL TERMINAL ============ */
+  .term{--g:#000;--ink:#66ff66;--muted:#58ca58;--rule:#255325;--em:#fff;font-family:'IBM Plex Mono',monospace}
+  .term .app{height:420px;overflow:hidden;border:1px solid var(--rule);background:var(--g);color:var(--ink)}
+  .term .nav{display:flex;justify-content:space-between;padding:9px 2ch;border-bottom:1px solid var(--rule);font-size:16px}
+  .term .nav .t{color:var(--em);font-weight:500}
+  .term .navlinks{display:flex;gap:3ch;color:var(--muted)}
+  .term .body{display:flex;height:calc(100% - 44px)}
+  .term .rail{width:16ch;border-right:1px solid var(--rule);padding:18px 0;font-size:16px}
+  .term .ri{display:flex;gap:1ch;padding:0 2ch;line-height:27px;color:var(--muted)}
+  .term .ri em{font-style:normal;width:2ch;color:var(--rule)}
+  .term .ri.on{background:var(--ink);color:#000;font-weight:500} .term .ri.on em{color:#000}
+  .term .main{flex:1;display:grid;grid-template-columns:1fr 1fr;min-width:0}
+  .term .pane{display:flex;flex-direction:column;overflow:hidden;min-width:0}
+  .term .pane+.pane{border-left:1px solid var(--rule)}
+  .term .ph{display:flex;justify-content:space-between;padding:9px 2ch;border-bottom:1px solid var(--rule);font-size:16px;color:var(--muted);gap:1ch}
+  .term .ph b{color:var(--em);font-weight:500}
+  .term .act{color:var(--ink);text-decoration:underline;text-underline-offset:3px}
+  .term .code{font:16px/27px 'IBM Plex Mono',monospace;padding:9px 2ch 9px 0;white-space:pre;overflow:hidden;flex:1;color:var(--ink)}
+  .term .ln{color:var(--rule);display:inline-block;width:3ch;text-align:right;margin-right:2ch}
+  .term .k{color:var(--em)}
+  .term .cursor{display:inline-block;width:1ch;height:1.1em;background:var(--ink);vertical-align:text-bottom;animation:blink 1.2s steps(1) infinite}
+  .term .errbox{border:1px solid var(--rule);background:#000;color:var(--ink);padding:9px 2ch;display:flex;gap:2ch;align-items:center;font-size:16px}
+  .term .errbox .tag{background:var(--em);color:#000;padding:0 1ch;font-weight:500}
+
+  @media (max-width:800px){
+    .cur .rail,.hyb .rail,.term .rail{display:none}
+    .cur .app,.hyb .app,.term .app,.cur .body,.hyb .body,.term .body{height:auto}
+    .hyb .code,.term .code,.cur .code{overflow-x:auto}
+    .cur .main,.hyb .main,.term .main{grid-template-columns:1fr}
+    .term .pane+.pane{border-left:0;border-top:1px solid var(--rule)}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="intro">
+    <h1>Layout B in three styles</h1>
+    <p>Same content in each: one JSON object, pasted and formatted. Under each, the same error ("missing comma on line 3") in that style.<br>Look at how readable the output is, and how clearly the error stands out.</p>
+  </div>
+
+  <!-- 1. CURRENT -->
+  <section class="block cur">
+    <div class="bh"><span class="tag">1</span><h2>Current</h2><span>Inter + JetBrains Mono, rounded glassy panes, grey grid, colored syntax</span></div>
+    <div class="app">
+      <div class="nav"><div class="logo"><i></i>formatly</div><div class="navlinks"><span>Shortcuts</span><span>GitHub</span></div></div>
+      <div class="body">
+        <div class="rail">
+          <div class="lbl">Formats</div>
+          <div class="ri on"><em>{ }</em>JSON</div><div class="ri"><em>---</em>YAML</div><div class="ri"><em>-&gt;</em>Mermaid</div>
+          <div class="ri"><em>&lt;/&gt;</em>XML</div><div class="ri"><em>SQL</em>SQL</div><div class="ri"><em>#</em>Markdown</div>
+        </div>
+        <div class="main">
+          <div class="pane"><div class="ph"><b>Input · JSON</b><span class="chip">Clear</span></div>
+<div class="code"><span class="ln">1</span><span class="p">{</span><span class="k">"user"</span>:<span class="p">{</span><span class="k">"id"</span>:<span class="n">42</span>,<span class="k">"name"</span>:<span class="s">"Asha"</span>,
+<span class="ln">2</span><span class="k">"roles"</span>:<span class="p">[</span><span class="s">"admin"</span>,<span class="s">"dev"</span><span class="p">]</span>,<span class="k">"active"</span>:<span class="n">true</span><span class="p">}}</span></div></div>
+          <div class="pane"><div class="ph"><b>Output</b><span style="display:flex;gap:8px;align-items:center"><span class="ok">Valid</span><span class="chip">Copy</span><span class="chip">Download</span></span></div>
+<div class="code"><span class="ln">1</span><span class="p">{</span>
+<span class="ln">2</span>  <span class="k">"user"</span>: <span class="p">{</span>
+<span class="ln">3</span>    <span class="k">"id"</span>: <span class="n">42</span>,
+<span class="ln">4</span>    <span class="k">"name"</span>: <span class="s">"Asha"</span>,
+<span class="ln">5</span>    <span class="k">"roles"</span>: <span class="p">[</span><span class="s">"admin"</span>, <span class="s">"dev"</span><span class="p">]</span>,
+<span class="ln">6</span>    <span class="k">"active"</span>: <span class="n">true</span>
+<span class="ln">7</span>  <span class="p">}</span>
+<span class="ln">8</span><span class="p">}</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="err-row"><div class="cap">Error state</div>
+      <div class="errbox"><span class="dot">Error</span><code>Line 3, column 5: Expected ',' or '}' after property value</code></div></div>
+  </section>
+
+  <!-- 2. HYBRID -->
+  <section class="block hyb">
+    <div class="bh" style="font-family:Inter"><span class="tag">2</span><h2>Hybrid (my recommendation)</h2><span>IBM Plex Mono everywhere, square corners, hairline rules, [bracketed] actions, green chrome; keeps the grid, syntax colors and a red error</span></div>
+    <div class="app">
+      <div class="nav"><div class="logo">formatly<span>_</span></div><div class="navlinks"><span>[shortcuts]</span><span>[github]</span></div></div>
+      <div class="body">
+        <div class="rail">
+          <div class="lbl">formats</div>
+          <div class="ri on"><em>01</em>json</div><div class="ri"><em>02</em>yaml</div><div class="ri"><em>03</em>mermaid</div>
+          <div class="ri"><em>04</em>xml</div><div class="ri"><em>05</em>sql</div><div class="ri"><em>06</em>markdown</div>
+        </div>
+        <div class="main">
+          <div class="pane"><div class="ph"><b>input · json</b><span class="acts"><span class="act">[clear]</span></span></div>
+<div class="code"><span class="ln">1</span><span class="p">{</span><span class="k">"user"</span>:<span class="p">{</span><span class="k">"id"</span>:<span class="n">42</span>,<span class="k">"name"</span>:<span class="s">"Asha"</span>,
+<span class="ln">2</span><span class="k">"roles"</span>:<span class="p">[</span><span class="s">"admin"</span>,<span class="s">"dev"</span><span class="p">]</span>,<span class="k">"active"</span>:<span class="n">true</span><span class="p">}}</span><span class="cursor"></span></div></div>
+          <div class="pane"><div class="ph"><b>output</b><span class="acts"><span class="ok">● valid</span><span class="act focus">[copy]</span><span class="act">[download]</span></span></div>
+<div class="code"><span class="ln">1</span><span class="p">{</span>
+<span class="ln">2</span>  <span class="k">"user"</span>: <span class="p">{</span>
+<span class="ln">3</span>    <span class="k">"id"</span>: <span class="n">42</span>,
+<span class="ln">4</span>    <span class="k">"name"</span>: <span class="s">"Asha"</span>,
+<span class="ln">5</span>    <span class="k">"roles"</span>: <span class="p">[</span><span class="s">"admin"</span>, <span class="s">"dev"</span><span class="p">]</span>,
+<span class="ln">6</span>    <span class="k">"active"</span>: <span class="n">true</span>
+<span class="ln">7</span>  <span class="p">}</span>
+<span class="ln">8</span><span class="p">}</span></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="err-row"><div class="cap" style="font-family:Inter">Error state</div>
+      <div class="errbox"><span class="tag">● error</span><code>line 3, col 5: expected ',' or '}' after property value</code></div></div>
+  </section>
+
+  <!-- 3. FULL TERMINAL -->
+  <section class="block term">
+    <div class="bh" style="font-family:Inter"><span class="tag">3</span><h2>Full terminal (prompt as written)</h2><span>Green/black/white only, no grid, 16px code (smallest token; body is 18px), keys in white as the only highlight</span></div>
+    <div class="app">
+      <div class="nav"><span class="t">formatly</span><span class="navlinks"><span>[shortcuts]</span><span>[github]</span></span></div>
+      <div class="body">
+        <div class="rail">
+          <div class="ri on"><em>01</em>json</div><div class="ri"><em>02</em>yaml</div><div class="ri"><em>03</em>mermaid</div>
+          <div class="ri"><em>04</em>xml</div><div class="ri"><em>05</em>sql</div><div class="ri"><em>06</em>markdown</div>
+        </div>
+        <div class="main">
+          <div class="pane"><div class="ph"><b>input · json</b><span class="act">clear</span></div>
+<div class="code"><span class="ln">1</span>{<span class="k">"user"</span>:{<span class="k">"id"</span>:42,<span class="k">"name"</span>:"Asha",
+<span class="ln">2</span><span class="k">"roles"</span>:["admin","dev"],<span class="k">"active"</span>:true}}<span class="cursor"></span></div></div>
+          <div class="pane"><div class="ph"><b>output</b><span style="display:flex;gap:2ch"><span>valid</span><span class="act">copy</span><span class="act">download</span></span></div>
+<div class="code"><span class="ln">1</span>{
+<span class="ln">2</span>  <span class="k">"user"</span>: {
+<span class="ln">3</span>    <span class="k">"id"</span>: 42,
+<span class="ln">4</span>    <span class="k">"name"</span>: "Asha",
+<span class="ln">5</span>    <span class="k">"roles"</span>: ["admin", "dev"],
+<span class="ln">6</span>    <span class="k">"active"</span>: true
+<span class="ln">7</span>  }
+<span class="ln">8</span>}</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="err-row"><div class="cap" style="font-family:Inter">Error state</div>
+      <div class="errbox"><span class="tag">ERR</span><span>line 3, col 5: expected ',' or '}' after property value</span></div></div>
+  </section>
+</div>
+</body>
+</html>
