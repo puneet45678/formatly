@@ -13,5 +13,5 @@ export const xml = {
     valid: '<a><b x="1">t</b><c/></a>',
     invalid: "<a>\n  <b></a>",
   },
-  load: () => import("../formatters/echo").then((m) => m.echo),
+  load: () => import("../formatters/xml").then((m) => m.formatXml),
 } as const satisfies FormatDefinition;
