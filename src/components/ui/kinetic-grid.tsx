@@ -49,7 +49,7 @@ const NODE_ACTIVE: Rgba = { r: 125, g: 211, b: 252, a: 1 };
 const GLOW = "125,211,252";
 
 /** Clicks inside any of these are interactions, not background clicks. */
-const NOT_BACKGROUND = "a, button, select, input, textarea, label, dialog, header, section, .cm-editor";
+const NOT_BACKGROUND = "a, button, select, input, textarea, label, dialog, section, .cm-editor";
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

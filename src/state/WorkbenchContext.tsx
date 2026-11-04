@@ -11,6 +11,9 @@ interface WorkbenchState {
   setInput: (id: FormatId, text: string) => void;
   sqlDialect: SqlDialect;
   setSqlDialect: (dialect: SqlDialect) => void;
+  /** Format menu shrunk to a strip of format symbols (desktop only). */
+  railCollapsed: boolean;
+  toggleRail: () => void;
 }
 
 const WorkbenchContext = createContext<WorkbenchState | null>(null);
@@ -24,14 +27,37 @@ function isSqlDialect(value: unknown): value is SqlDialect {
 export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const [inputs, setInputs] = useState(emptyInputs);
   const [sqlDialect, setSqlDialectState] = useState<SqlDialect>("sql");
+  const [railCollapsed, setRailCollapsed] = useState(false);
 
   // Read after mount so the first render matches the static HTML.
   // (Reading during render would make the server and browser HTML differ.)
   useEffect(() => {
-    const stored = readStored(STORAGE_KEYS.sqlDialect);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time sync from browser storage after hydration
-    if (isSqlDialect(stored)) setSqlDialectState(stored);
+    const storedDialect = readStored(STORAGE_KEYS.sqlDialect);
+    /* eslint-disable react-hooks/set-state-in-effect -- one-time sync from browser storage after hydration */
+    if (isSqlDialect(storedDialect)) setSqlDialectState(storedDialect);
+    if (readStored(STORAGE_KEYS.railCollapsed) === "true") setRailCollapsed(true);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
+
+  const toggleRail = useCallback(() => {
+    setRailCollapsed((collapsed) => {
+      // Writing the same value twice (React may re-run this in dev) is harmless.
+      writeStored(STORAGE_KEYS.railCollapsed, String(!collapsed));
+      return !collapsed;
+    });
+  }, []);
+
+  // ⌘\ (Mac) or Ctrl+\ (Windows/Linux) toggles the format menu, as in Notion.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "\\") {
+        e.preventDefault();
+        toggleRail();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [toggleRail]);
 
   const setInput = useCallback((id: FormatId, text: string) => {
     setInputs((prev) => ({ ...prev, [id]: text }));
@@ -43,8 +69,8 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ inputs, setInput, sqlDialect, setSqlDialect }),
-    [inputs, setInput, sqlDialect, setSqlDialect],
+    () => ({ inputs, setInput, sqlDialect, setSqlDialect, railCollapsed, toggleRail }),
+    [inputs, setInput, sqlDialect, setSqlDialect, railCollapsed, toggleRail],
   );
 
   return <WorkbenchContext.Provider value={value}>{children}</WorkbenchContext.Provider>;

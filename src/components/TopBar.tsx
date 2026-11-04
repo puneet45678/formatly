@@ -9,7 +9,8 @@ export function TopBar() {
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
 
   return (
-    <header className="flex shrink-0 items-center justify-between border-b border-line2 bg-bg/60 px-[22px] py-3.5 backdrop-blur-md">
+    // See-through on purpose: the kinetic grid runs under the top bar too.
+    <header className="flex shrink-0 items-center justify-between border-b border-line2 px-[22px] py-3.5">
       <div className="flex items-center gap-2 text-sm font-semibold">
         <span aria-hidden="true" className="inline-block size-[18px] rounded-[5px] bg-linear-135 from-white to-[#777]" />
         formatly

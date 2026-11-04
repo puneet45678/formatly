@@ -161,13 +161,17 @@ describe("isBackgroundClick", () => {
     expect(isBackgroundClick(el('<nav aria-label="Formats"></nav>', "nav"))).toBe(true);
   });
 
+  it("counts empty top-bar space as background", () => {
+    expect(isBackgroundClick(el("<header><span>formatly</span></header>", "span"))).toBe(true);
+    expect(isBackgroundClick(el("<header><button>Shortcuts</button></header>", "button"))).toBe(false);
+  });
+
   it("ignores controls, panes and dialogs", () => {
     expect(isBackgroundClick(el("<button>Copy</button>", "button"))).toBe(false);
     expect(isBackgroundClick(el('<a href="/json">JSON</a>', "a"))).toBe(false);
     expect(isBackgroundClick(el("<select></select>", "select"))).toBe(false);
     expect(isBackgroundClick(el('<section class="pane"><p>x</p></section>', "p"))).toBe(false);
     expect(isBackgroundClick(el("<dialog><p>x</p></dialog>", "p"))).toBe(false);
-    expect(isBackgroundClick(el("<header><span>formatly</span></header>", "span"))).toBe(false);
   });
 
   it("ignores a missing target", () => {

@@ -12,7 +12,7 @@ import { OutputPane } from "./OutputPane";
 /** The whole tool for one format: rail on the left, input and output panes. */
 export function Workbench({ formatId }: { formatId: FormatId }) {
   const format = getFormat(formatId);
-  const { inputs, setInput, sqlDialect, setSqlDialect } = useWorkbench();
+  const { inputs, setInput, sqlDialect, setSqlDialect, railCollapsed, toggleRail } = useWorkbench();
   const input = inputs[formatId];
   const state = useFormattedOutput(formatId, input, formatId === "sql" ? { sqlDialect } : undefined);
 
@@ -20,7 +20,7 @@ export function Workbench({ formatId }: { formatId: FormatId }) {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col md:flex-row">
-      <FormatRail activeId={formatId} />
+      <FormatRail activeId={formatId} collapsed={railCollapsed} onToggle={toggleRail} />
       <main className="grid min-h-0 flex-1 grid-cols-1 gap-3.5 overflow-y-auto p-3 md:grid-cols-2 md:overflow-hidden md:p-[18px]">
         <InputPane
           formatId={formatId}

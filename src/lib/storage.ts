@@ -5,6 +5,7 @@
 export const STORAGE_KEYS = {
   lastFormat: "formatly:lastFormat",
   sqlDialect: "formatly:sqlDialect",
+  railCollapsed: "formatly:railCollapsed",
 } as const;
 
 export function readStored(key: string): string | null {

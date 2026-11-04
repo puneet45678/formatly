@@ -67,6 +67,11 @@ The user compared three layouts and chose **B: a format list in a side rail**. A
 - Syntax colors: keys in light blue, strings in mint, numbers and booleans in amber, punctuation in grey.
 - Restraint over decoration. No gradients on panes and no colored accents beyond status and syntax.
 
+**Added after phase 1 (decided by the owner):**
+- **Interactive background.** The grid is a "kinetic grid": it bends toward the pointer and ripples on clicks on empty background. It only animates while something moves, pauses in hidden tabs, and stays still for reduced-motion users. The static CSS grid stays underneath as the no-JS fallback.
+- **See-through top bar.** No tint or blur, just the bottom hairline, so the grid runs under it.
+- **Collapsible format menu (desktop).** A button at the top of the rail, or ⌘/Ctrl + \, collapses it to a ~52px strip of format symbols. Names stay available as hover titles and to screen readers. The choice is remembered (`formatly:railCollapsed`). Phones keep the pill row.
+
 **Name:** "formatly" is a placeholder I used in the mockup, not a decision. *(my call to use it until the user picks a name)*
 
 ## 6. Behaviour

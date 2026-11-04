@@ -25,6 +25,10 @@ describe("storage", () => {
   });
 
   it("uses the spec keys", () => {
-    expect(STORAGE_KEYS).toEqual({ lastFormat: "formatly:lastFormat", sqlDialect: "formatly:sqlDialect" });
+    expect(STORAGE_KEYS).toEqual({
+      lastFormat: "formatly:lastFormat",
+      sqlDialect: "formatly:sqlDialect",
+      railCollapsed: "formatly:railCollapsed",
+    });
   });
 });
