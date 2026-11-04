@@ -2,12 +2,14 @@ import { format } from "sql-formatter";
 import { formatError } from "../errors";
 import type { FormatResult, FormatSettings } from "../types";
 
-// sql-formatter reports problems by throwing an Error. The first line of its
-// message ends with the position, e.g. `Parse error: Unexpected "[id] from " at line 1 column 8.`
-// Later lines are extra hints we do not need.
+// sql-formatter reports problems by throwing an Error. The message starts like
+// `Parse error: Unexpected "[id] from " at line 1 column 8.` or
+// `Parse error at token: ) at line 1 column 8`, followed by extra hint lines.
+// The quoted token can itself span several lines, so we look for the position
+// in the whole message instead of cutting at the first line break.
 const POSITION = /at line (\d+) column (\d+)/;
-const LEADING_PREFIX = /^Parse error( at token:)?:?\s*/;
-const POSITION_SUFFIX = /\s*at line \d+ column \d+\.?$/;
+const TOKEN_PREFIX = /^Parse error at token:\s*/;
+const PARSE_PREFIX = /^Parse error:\s*/;
 
 // Standard SQL is the strictest dialect, so most "unexpected" errors there
 // are really "this is another dialect's syntax".
@@ -21,17 +23,23 @@ export function formatSql(input: string, settings: FormatSettings): FormatResult
     // the definition only offers ids sql-formatter knows.
     return { ok: true, output: format(input, { language: dialect as "sql", keywordCase: "upper" }) };
   } catch (error) {
-    const firstLine = (error instanceof Error ? error.message : String(error)).split("\n")[0];
-    const match = POSITION.exec(firstLine);
+    const full = error instanceof Error ? error.message : String(error);
+    const match = POSITION.exec(full);
     const line = match ? Number(match[1]) : 1;
     const column = match ? Number(match[2]) : undefined;
+    // Keep only the text before the position; without a position, the first line.
+    const head = match ? full.slice(0, match.index) : full.split("\n")[0];
 
     // "«EOF»" means the parser ran out of text while still expecting more.
-    if (firstLine.includes("«EOF»")) {
+    if (head.includes("«EOF»")) {
       return formatError("The query ends before it is complete", line, column);
     }
 
-    const message = firstLine.replace(LEADING_PREFIX, "").replace(POSITION_SUFFIX, "");
+    // Collapse line breaks and runs of spaces so the message reads on one line.
+    const text = head.replace(/\s+/g, " ").trim();
+    const message = TOKEN_PREFIX.test(text)
+      ? `Unexpected "${text.replace(TOKEN_PREFIX, "")}"`
+      : text.replace(PARSE_PREFIX, "");
     return formatError(dialect === "sql" ? message + DIALECT_HINT : message, line, column);
   }
 }

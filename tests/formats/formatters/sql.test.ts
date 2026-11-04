@@ -32,6 +32,22 @@ describe("formatSql", () => {
     });
   });
 
+  it("keeps the position and full message when the quoted token spans lines", () =>
+    expect(formatSql("select 1\nfrom t\nwhere [id]\n  from x", { dialect: "sql" })).toEqual({
+      ok: false,
+      error: {
+        message: 'Unexpected "[id] fro" — if this is SQL Server, MySQL or PostgreSQL, pick it in the dialect menu',
+        line: 3,
+        column: 7,
+      },
+    }));
+
+  it("words an unexpected-token error as Unexpected", () =>
+    expect(formatSql("select ) from t", { dialect: "postgresql" })).toEqual({
+      ok: false,
+      error: { message: 'Unexpected ")"', line: 1, column: 8 },
+    }));
+
   it("explains a query that stops too early, with its position", () =>
     expect(formatSql("select *\nfrom t where (", { dialect: "postgresql" })).toEqual({
       ok: false,
