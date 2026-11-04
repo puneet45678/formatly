@@ -39,7 +39,7 @@ docs/architecture.md               this file
 `runFormatter(id, input, settings)` is the only door the UI uses. It looks at the definition's `runsOn`:
 
 - **`"worker"`** (JSON, YAML, SQL, XML, Markdown): the request goes to `workerClient`, which posts it to a Web Worker (`format.worker.ts`). The worker calls `formatInput` and replies. A big paste therefore can't freeze typing. The client tags each request with an id, and if a job has been running for more than 50 ms when a newer request arrives, it throws that worker away and starts a fresh one (`SUPERSEDE_AFTER_MS`). The old job's result would be discarded anyway, and a respawn measured 20–50 ms in Chromium, so replacing the worker is cheaper than waiting. A job that takes over 15 seconds or a worker that crashes comes back as `{ kind: "failed" }`, and a replaced job as `{ kind: "cancelled" }`, so callers never see a rejected promise.
-- **`"main"`** (Mermaid only): it needs the DOM to render, which a worker doesn't have, so `formatInput` runs on the page. The same happens for every format when the browser has no `Worker` (and in tests).
+- **`"main"`** (Mermaid only): it needs the DOM to render, which a worker doesn't have, so `formatInput` runs on the page. Its output is SVG sanitized with DOMPurify before anything uses it, and diagrams over Mermaid's limits (50,000 characters, 500 edges) are refused as too complex. Why it doesn't run in a sandboxed iframe: [ADR 0001](adr/0001-mermaid-stays-on-the-main-thread.md). The same happens for every format when the browser has no `Worker` (and in tests).
 
 Either way the last step is `formatInput`: it loads the formatter with `definition.load()`, cleans the settings and runs it. A formatter returns a `FormatResult`: its output, or a syntax error with a 1-based `line` and optional `column` (build one with `formatError(message, line, column)`; `positionAt(text, offset)` turns a character offset into a line and column). A formatter can also just throw.
 
@@ -51,7 +51,7 @@ Either way the last step is `formatInput`: it loads the formatter with `definiti
 | --- | --- | --- | --- |
 | `ok` | Formatted output | — | Output, "Valid" |
 | `invalid` | The formatter found a syntax error | Yes | Red "Error", "Line N", the line marked in the editor |
-| `failed` | We couldn't finish: `timeout`, `crashed`, `too-complex` (stack overflow), `internal` (a throw or a failed download) | No | Neutral "Couldn't format"; "Try again" only for `crashed` and `internal` |
+| `failed` | We couldn't finish: `timeout`, `crashed`, `too-complex` (stack overflow, or a formatter's `TooComplexError`), `internal` (a throw or a failed download) | No | Neutral "Couldn't format"; "Try again" only for `crashed` and `internal` |
 | `cancelled` | A newer request replaced this one | — | Nothing changes |
 
 Only `invalid` carries a line, so a timeout or crash can never mark line 1 of the input as if it were wrong.

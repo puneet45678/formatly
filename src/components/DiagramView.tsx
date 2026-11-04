@@ -3,7 +3,8 @@
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Scan, ZoomIn, ZoomOut } from "lucide-react";
 
-// Phase 2 must render Mermaid with securityLevel: "strict" before passing the SVG in.
+// The SVG arrives sanitized: formatters/mermaid.ts renders with securityLevel "strict"
+// and then runs DOMPurify on the result, before it is set as innerHTML here.
 
 export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 8;

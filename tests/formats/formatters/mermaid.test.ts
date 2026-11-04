@@ -144,4 +144,65 @@ describe("mermaidErrorPosition", () => {
     const err = { message: "x", hash: { loc: { first_line: 2, first_column: 0 } } };
     expect(mermaidErrorPosition(err)).toEqual({ line: 2, column: 1 });
   });
+
+});
+
+describe("limits", () => {
+  it("refuses a diagram over the size limit instead of drawing Mermaid's placeholder", async () => {
+    const { renderMermaid, MAX_DIAGRAM_CHARS } = await freshModule();
+    const { TooComplexError } = await import("@/formats/errors");
+    const huge = "graph TD\n" + "A-->B\n".repeat(MAX_DIAGRAM_CHARS / 6 + 1);
+    await expect(renderMermaid(huge)).rejects.toBeInstanceOf(TooComplexError);
+    await expect(renderMermaid(huge)).rejects.toThrow(/too large to draw/);
+    expect(mock.render).not.toHaveBeenCalled();
+  });
+
+  it("turns Mermaid's edge limit into a too-complex error, not an error at line 1", async () => {
+    mock.render.mockRejectedValue(new Error("Edge limit exceeded. 501 edges found, but the limit is 500."));
+    const { renderMermaid } = await freshModule();
+    const { TooComplexError } = await import("@/formats/errors");
+    await expect(renderMermaid("graph TD; A-->B")).rejects.toBeInstanceOf(TooComplexError);
+  });
+
+  it("passes the limits to Mermaid so both sides agree", async () => {
+    const { renderMermaid, MAX_DIAGRAM_CHARS, MAX_DIAGRAM_EDGES } = await freshModule();
+    await renderMermaid("graph TD; A-->B");
+    expect(mock.initialize).toHaveBeenCalledWith(
+      expect.objectContaining({ maxTextSize: MAX_DIAGRAM_CHARS, maxEdges: MAX_DIAGRAM_EDGES }),
+    );
+  });
+});
+
+describe("sanitizing", () => {
+  it("removes scripts and event handlers from the SVG", async () => {
+    mock.render.mockResolvedValue({
+      svg: '<svg xmlns="http://www.w3.org/2000/svg" onload="alert(1)"><script>alert(2)</script><g><text>ok</text></g></svg>',
+    });
+    const { renderMermaid } = await freshModule();
+    const result = await renderMermaid("graph TD; A-->B");
+    if (!result.ok) throw new Error("expected output");
+    expect(result.output).not.toMatch(/script|onload|alert/);
+    expect(result.output).toContain("<text>ok</text>");
+  });
+
+  it("keeps flowchart labels, which are HTML inside foreignObject", async () => {
+    mock.render.mockResolvedValue({
+      svg: '<svg xmlns="http://www.w3.org/2000/svg"><g class="label"><foreignObject width="40" height="20"><div xmlns="http://www.w3.org/1999/xhtml"><span class="nodeLabel">Start</span></div></foreignObject></g></svg>',
+    });
+    const { renderMermaid } = await freshModule();
+    const result = await renderMermaid("graph TD; A-->B");
+    if (!result.ok) throw new Error("expected output");
+    expect(result.output).toMatch(/<foreignObject[^>]*>/);
+    expect(result.output).toContain('<span class="nodeLabel">Start</span>');
+  });
+
+  it("drops a javascript: link inside a label", async () => {
+    mock.render.mockResolvedValue({
+      svg: '<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><div xmlns="http://www.w3.org/1999/xhtml"><a href="javascript:alert(1)">x</a></div></foreignObject></svg>',
+    });
+    const { renderMermaid } = await freshModule();
+    const result = await renderMermaid("graph TD; A-->B");
+    if (!result.ok) throw new Error("expected output");
+    expect(result.output).not.toContain("javascript:");
+  });
 });
