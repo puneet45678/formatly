@@ -27,12 +27,12 @@ const SINGLE_QUOTES = "Strings must use double quotes";
 const TOO_DEEP = "This is nested too deeply to format";
 
 /**
- * Finds how deep the brackets nest, stopping early once past the limit.
+ * Finds the bracket that first nests deeper than MAX_JSON_DEPTH, or -1 if none does.
  * Skips string contents so brackets inside strings don't count.
  * This must run before parsing: the parser and formatter recurse, and
  * 100 000 nested "[" ran Node out of memory.
  */
-function isNestedTooDeeply(text: string): boolean {
+function tooDeepAt(text: string): number {
   let depth = 0;
   let inString = false;
   for (let i = 0; i < text.length; i++) {
@@ -43,12 +43,12 @@ function isNestedTooDeeply(text: string): boolean {
     } else if (ch === '"') {
       inString = true;
     } else if (ch === "[" || ch === "{") {
-      if (++depth > MAX_JSON_DEPTH) return true;
+      if (++depth > MAX_JSON_DEPTH) return i;
     } else if (ch === "]" || ch === "}") {
       depth--;
     }
   }
-  return false;
+  return -1;
 }
 
 /** Picks the message for the parser's first error, with friendlier wording for common mistakes. */
@@ -87,7 +87,12 @@ function applyAllEdits(text: string, edits: Edit[]): string {
 }
 
 export function formatJson(input: string): FormatResult {
-  if (isNestedTooDeeply(input)) return formatError(TOO_DEEP, 1);
+  // Point at the bracket that crosses the limit, so the editor marks a real line.
+  const deep = tooDeepAt(input);
+  if (deep !== -1) {
+    const { line, column } = positionAt(input, deep);
+    return formatError(TOO_DEEP, line, column);
+  }
 
   const errors: ParseError[] = [];
   parse(input, errors, { disallowComments: true, allowTrailingComma: false, allowEmptyContent: false });

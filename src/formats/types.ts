@@ -8,7 +8,32 @@ export type { FormatId } from "./definitions";
 
 export type FormatError = { message: string; line: number; column?: number };
 
+/**
+ * What a formatter returns: its output, or a syntax error in the input.
+ * This is the formatter's whole contract; it knows nothing about workers or timeouts.
+ */
 export type FormatResult = { ok: true; output: string } | { ok: false; error: FormatError };
+
+/**
+ * Why formatting stopped without telling us anything about the input's syntax.
+ * None of these has a position, so the editor never highlights a line for them.
+ * - timeout: ran longer than the worker allows.
+ * - crashed: the worker died.
+ * - too-complex: the formatter ran out of stack (deeply nested input).
+ * - internal: the formatter threw, or its code failed to download.
+ */
+export type FailureReason = "timeout" | "crashed" | "too-complex" | "internal";
+
+/**
+ * What running a format produced, as the UI sees it. Returned by formatInput,
+ * the worker and runFormatter. It keeps "your input is wrong" (invalid) apart
+ * from "we couldn't finish" (failed) and "nobody wants this any more" (cancelled).
+ */
+export type FormatOutcome =
+  | { kind: "ok"; output: string }
+  | { kind: "invalid"; error: FormatError }
+  | { kind: "failed"; reason: FailureReason; message: string }
+  | { kind: "cancelled" };
 
 /** A format's chosen settings, e.g. `{ dialect: "mysql" }` for SQL. Empty for formats without settings. */
 export type FormatSettings = Readonly<Record<string, string>>;

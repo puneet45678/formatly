@@ -52,7 +52,8 @@ export function Workbench({ formatId }: { formatId: FormatId }) {
           value={input}
           onChange={(text) => setInput(formatId, text)}
           onClear={() => setInput(formatId, "")}
-          errorLine={state.status === "error" ? state.error.line : undefined}
+          // Only a syntax error points at a line; a timeout or crash says nothing about line 1.
+          errorLine={state.status === "invalid" ? state.error.line : undefined}
           settings={formatSettings}
           onSettingChange={(key, value) => setSetting(formatId, key, value)}
         />

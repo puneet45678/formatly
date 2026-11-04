@@ -42,7 +42,7 @@ describe("OutputActions", () => {
   it("actions are disabled unless status is ok", () => {
     const { rerender } = render(<OutputActions format={getFormat("json")} state={{ status: "empty" }} />);
     for (const b of screen.getAllByRole("button")) expect(b).toBeDisabled();
-    rerender(<OutputActions format={getFormat("json")} state={{ status: "error", error: { message: "x", line: 1 } }} />);
+    rerender(<OutputActions format={getFormat("json")} state={{ status: "invalid", error: { message: "x", line: 1 } }} />);
     for (const b of screen.getAllByRole("button")) expect(b).toBeDisabled();
   });
 

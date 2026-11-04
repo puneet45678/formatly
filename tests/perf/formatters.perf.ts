@@ -40,7 +40,7 @@ async function medianMs(format: FormatId, input: string, runs = 3): Promise<numb
     const start = performance.now();
     const result = await formatInput(format, input, settings);
     times.push(performance.now() - start);
-    expect(result.ok, `${format} fixture should format without errors`).toBe(true);
+    expect(result.kind, `${format} fixture should format without errors`).toBe("ok");
   }
   times.sort((a, b) => a - b);
   return times[Math.floor(times.length / 2)];

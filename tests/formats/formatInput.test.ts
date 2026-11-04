@@ -14,38 +14,45 @@ afterEach(() => {
 });
 
 describe("formatInput", () => {
-  it("returns the formatter's result", async () => {
+  it("returns the formatter's output", async () => {
     stubFormatter("json", (input) => ({ ok: true, output: input.toUpperCase() }));
-    await expect(formatInput("json", "abc", {})).resolves.toEqual({ ok: true, output: "ABC" });
+    await expect(formatInput("json", "abc", {})).resolves.toEqual({ kind: "ok", output: "ABC" });
   });
 
-  it("turns unexpected throws into an error at line 1", async () => {
+  it("reports the formatter's syntax error as invalid input, with its position", async () => {
+    stubFormatter("json", () => ({ ok: false, error: { message: "Expected a comma", line: 3, column: 7 } }));
+    await expect(formatInput("json", "x", {})).resolves.toEqual({
+      kind: "invalid",
+      error: { message: "Expected a comma", line: 3, column: 7 },
+    });
+  });
+
+  // A throw is our failure, not a syntax error, so it carries no line for the editor to mark.
+  it("turns unexpected throws into an internal failure with no position", async () => {
     stubFormatter("json", () => {
       throw new Error("boom");
     });
-    await expect(formatInput("json", "x", {})).resolves.toEqual({ ok: false, error: { message: "boom", line: 1 } });
+    await expect(formatInput("json", "x", {})).resolves.toEqual({ kind: "failed", reason: "internal", message: "boom" });
   });
 
-  it("turns a rejected promise into an error at line 1", async () => {
+  it("turns a rejected promise into an internal failure", async () => {
     stubFormatter("json", () => Promise.reject(new Error("later")));
-    await expect(formatInput("json", "x", {})).resolves.toEqual({ ok: false, error: { message: "later", line: 1 } });
+    await expect(formatInput("json", "x", {})).resolves.toEqual({ kind: "failed", reason: "internal", message: "later" });
   });
 
-  it("turns a failure to load the formatter into an error at line 1", async () => {
+  it("turns a failure to load the formatter into an internal failure", async () => {
     vi.spyOn(getFormat("json"), "load").mockRejectedValue(new Error("chunk failed"));
-    await expect(formatInput("json", "x", {})).resolves.toEqual({
-      ok: false,
-      error: { message: "chunk failed", line: 1 },
-    });
+    await expect(formatInput("json", "x", {})).resolves.toEqual({ kind: "failed", reason: "internal", message: "chunk failed" });
   });
 
-  it("turns a stack overflow into a nesting error", async () => {
+  it("turns a stack overflow into a too-complex failure", async () => {
     stubFormatter("json", () => {
       throw new RangeError("Maximum call stack size exceeded");
     });
     await expect(formatInput("json", "x", {})).resolves.toEqual({
-      ok: false,
-      error: { message: "This is nested too deeply to format", line: 1 },
+      kind: "failed",
+      reason: "too-complex",
+      message: "This is nested too deeply to format",
     });
   });
 

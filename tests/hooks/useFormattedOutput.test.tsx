@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import type { FormatId, FormatResult, FormatSettings } from "@/formats/types";
+import type { FormatId, FormatOutcome, FormatSettings } from "@/formats/types";
 
-const runFormatter = vi.fn<(id: FormatId, input: string, settings: FormatSettings) => Promise<FormatResult>>();
+const runFormatter = vi.fn<(id: FormatId, input: string, settings: FormatSettings) => Promise<FormatOutcome>>();
 vi.mock("@/formats/runFormatter", () => ({ runFormatter: (...args: Parameters<typeof runFormatter>) => runFormatter(...args) }));
 
 import { FORMAT_DEBOUNCE_MS, useFormattedOutput } from "@/hooks/useFormattedOutput";
@@ -23,15 +23,15 @@ async function flush() {
 }
 
 function deferred() {
-  let resolve!: (r: FormatResult) => void;
-  const promise = new Promise<FormatResult>((r) => (resolve = r));
+  let resolve!: (r: FormatOutcome) => void;
+  const promise = new Promise<FormatOutcome>((r) => (resolve = r));
   return { promise, resolve };
 }
 
 beforeEach(() => {
   vi.useFakeTimers();
   runFormatter.mockReset();
-  runFormatter.mockImplementation(async (_id, input) => ({ ok: true, output: input }));
+  runFormatter.mockImplementation(async (_id, input) => ({ kind: "ok", output: input }));
 });
 afterEach(() => vi.useRealTimers());
 
@@ -62,24 +62,24 @@ describe("useFormattedOutput", () => {
   });
 
   it("shows ok output", async () => {
-    runFormatter.mockResolvedValue({ ok: true, output: "X" });
+    runFormatter.mockResolvedValue({ kind: "ok", output: "X" });
     const { result } = setup({ id: "json", input: "x" });
     await flush();
     expect(result.current).toEqual({ status: "ok", output: "X" });
   });
 
   it("replaces old output with the error", async () => {
-    runFormatter.mockResolvedValueOnce({ ok: true, output: "X" });
+    runFormatter.mockResolvedValueOnce({ kind: "ok", output: "X" });
     const { result, rerender } = setup({ id: "json", input: "x" });
     await flush();
-    runFormatter.mockResolvedValueOnce({ ok: false, error: { message: "bad", line: 3 } });
+    runFormatter.mockResolvedValueOnce({ kind: "invalid", error: { message: "bad", line: 3 } });
     rerender({ id: "json", input: "x," });
     await flush();
-    expect(result.current).toEqual({ status: "error", error: { message: "bad", line: 3 } });
+    expect(result.current).toEqual({ status: "invalid", error: { message: "bad", line: 3 } });
   });
 
   it("keeps the previous state during the debounce wait", async () => {
-    runFormatter.mockResolvedValueOnce({ ok: true, output: "X" });
+    runFormatter.mockResolvedValueOnce({ kind: "ok", output: "X" });
     const { result, rerender } = setup({ id: "json", input: "x" });
     await flush();
     rerender({ id: "json", input: "xy" });
@@ -94,8 +94,8 @@ describe("useFormattedOutput", () => {
     await flush();
     rerender({ id: "json", input: "two" });
     await flush();
-    await act(async () => second.resolve({ ok: true, output: "TWO" }));
-    await act(async () => first.resolve({ ok: true, output: "ONE" }));
+    await act(async () => second.resolve({ kind: "ok", output: "TWO" }));
+    await act(async () => first.resolve({ kind: "ok", output: "ONE" }));
     expect(result.current).toEqual({ status: "ok", output: "TWO" });
   });
 
@@ -105,15 +105,15 @@ describe("useFormattedOutput", () => {
     const { result, rerender } = setup({ id: "json", input: "{}" });
     await flush();
     rerender({ id: "yaml", input: "" });
-    await act(async () => pending.resolve({ ok: true, output: "JSON RESULT" }));
+    await act(async () => pending.resolve({ kind: "ok", output: "JSON RESULT" }));
     expect(result.current).toEqual({ status: "empty" });
   });
 
   it("never shows the previous format's output after switching", async () => {
-    runFormatter.mockResolvedValueOnce({ ok: true, output: "JSON OUT" });
+    runFormatter.mockResolvedValueOnce({ kind: "ok", output: "JSON OUT" });
     const { result, rerender } = setup({ id: "json", input: "{}" });
     await flush();
-    runFormatter.mockResolvedValueOnce({ ok: true, output: "YAML OUT" });
+    runFormatter.mockResolvedValueOnce({ kind: "ok", output: "YAML OUT" });
     rerender({ id: "yaml", input: "a: 1" });
     expect(result.current).not.toEqual({ status: "ok", output: "JSON OUT" });
     await act(async () => {
@@ -132,7 +132,7 @@ describe("useFormattedOutput", () => {
   });
 
   it("returns to empty when input is cleared after an error", async () => {
-    runFormatter.mockResolvedValueOnce({ ok: false, error: { message: "bad", line: 1 } });
+    runFormatter.mockResolvedValueOnce({ kind: "invalid", error: { message: "bad", line: 1 } });
     const { result, rerender } = setup({ id: "json", input: "x" });
     await flush();
     rerender({ id: "json", input: "" });
@@ -157,10 +157,45 @@ describe("useFormattedOutput", () => {
     expect(runFormatter).toHaveBeenLastCalledWith("sql", "select 1", { dialect: "mysql" });
   });
 
-  it("turns a rejected formatter into an error at line 1", async () => {
+  it("turns a rejected formatter into a retryable internal failure, not a line error", async () => {
     runFormatter.mockRejectedValueOnce(new Error("boom"));
     const { result } = setup({ id: "json", input: "x" });
     await flush();
-    expect(result.current).toEqual({ status: "error", error: { message: "boom", line: 1 } });
+    expect(result.current).toEqual({ status: "failed", reason: "internal", message: "boom", retry: expect.any(Function) });
+  });
+
+  it("shows a timeout as a failure without a retry, since the same input would time out again", async () => {
+    runFormatter.mockResolvedValueOnce({ kind: "failed", reason: "timeout", message: "Formatting took too long" });
+    const { result } = setup({ id: "json", input: "x" });
+    await flush();
+    expect(result.current).toEqual({ status: "failed", reason: "timeout", message: "Formatting took too long" });
+  });
+
+  it("offers a retry after a crash, and the retry runs right away", async () => {
+    runFormatter.mockResolvedValueOnce({ kind: "failed", reason: "crashed", message: "stopped" });
+    const { result } = setup({ id: "json", input: "x" });
+    await flush();
+    const state = result.current;
+    expect(state).toMatchObject({ status: "failed", reason: "crashed" });
+    if (state.status !== "failed" || !state.retry) throw new Error("expected a retry");
+
+    runFormatter.mockResolvedValueOnce({ kind: "ok", output: "X" });
+    act(() => state.retry!());
+    // No debounce: a retry is a deliberate click, not typing.
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(runFormatter).toHaveBeenCalledTimes(2);
+    expect(result.current).toEqual({ status: "ok", output: "X" });
+  });
+
+  it("leaves the output alone when a job is cancelled", async () => {
+    runFormatter.mockResolvedValueOnce({ kind: "ok", output: "X" });
+    const { result, rerender } = setup({ id: "json", input: "x" });
+    await flush();
+    runFormatter.mockResolvedValueOnce({ kind: "cancelled" });
+    rerender({ id: "json", input: "xy" });
+    await flush();
+    expect(result.current).toEqual({ status: "ok", output: "X" });
   });
 });

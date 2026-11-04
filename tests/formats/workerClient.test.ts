@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createWorkerClient, SUPERSEDE_AFTER_MS, TIMEOUT_MS } from "@/formats/workerClient";
 import type { WorkerLike, WorkerRequest } from "@/formats/workerClient";
-import type { FormatResult } from "@/formats/types";
+import type { FormatOutcome } from "@/formats/types";
 
 // A stand-in for a real Web Worker: records what was posted and lets a test
 // decide when (and whether) it answers.
@@ -17,7 +17,7 @@ class FakeWorker implements WorkerLike {
   terminate() {
     this.terminated += 1;
   }
-  respond(id: number, result: FormatResult) {
+  respond(id: number, result: FormatOutcome) {
     this.onmessage?.({ data: { id, result } });
   }
   crash() {
@@ -25,8 +25,8 @@ class FakeWorker implements WorkerLike {
   }
 }
 
-const ok = (output: string): FormatResult => ({ ok: true, output });
-const failure = (message: string): FormatResult => ({ ok: false, error: { message, line: 1 } });
+const ok = (output: string): FormatOutcome => ({ kind: "ok", output });
+const invalid = (message: string): FormatOutcome => ({ kind: "invalid", error: { message, line: 1 } });
 
 let workers: FakeWorker[];
 const spawn = vi.fn(() => {
@@ -98,7 +98,7 @@ describe("createWorkerClient", () => {
     expect(workers[0].terminated).toBe(1);
     expect(spawn).toHaveBeenCalledTimes(2);
     expect(workers[1].posted.map((p) => p.input)).toEqual(["B"]);
-    await expect(jobA).resolves.toEqual({ ok: false, error: { message: "Superseded", line: 1 } });
+    await expect(jobA).resolves.toEqual({ kind: "cancelled" });
 
     workers[1].respond(workers[1].posted[0].id, ok("B done"));
     await expect(jobB).resolves.toEqual(ok("B done"));
@@ -108,7 +108,7 @@ describe("createWorkerClient", () => {
     const client = createWorkerClient(spawn);
     const jobA = client.run("json", "A", {});
 
-    vi.advanceTimersByTime(100);
+    vi.advanceTimersByTime(SUPERSEDE_AFTER_MS - 1);
     const jobB = client.run("json", "B", {});
 
     expect(workers).toHaveLength(1);
@@ -122,13 +122,40 @@ describe("createWorkerClient", () => {
     await expect(jobB).resolves.toEqual(ok("B done"));
   });
 
+  // The bug the 50 ms threshold fixes: with the old 300 ms, switching format
+  // 100 ms into a slow job queued the new request behind it for the whole job.
+  it("does not make a new request wait behind a slow job that is 100 ms in", async () => {
+    const client = createWorkerClient(spawn);
+    const slow = client.run("markdown", "huge paste", {});
+
+    vi.advanceTimersByTime(100);
+    const next = client.run("json", "{}", {});
+
+    expect(workers[0].terminated).toBe(1);
+    expect(workers[1].posted.map((p) => p.format)).toEqual(["json"]);
+    await expect(slow).resolves.toEqual({ kind: "cancelled" });
+    workers[1].respond(workers[1].posted[0].id, ok("{}"));
+    await expect(next).resolves.toEqual(ok("{}"));
+  });
+
+  it("keeps the threshold well under the typing debounce and near the measured respawn cost", () => {
+    // Respawning measured 20-50 ms in Chromium; typing is debounced 300 ms.
+    expect(SUPERSEDE_AFTER_MS).toBeGreaterThanOrEqual(20);
+    expect(SUPERSEDE_AFTER_MS).toBeLessThan(300);
+  });
+
   it("times out a job that never finishes", async () => {
     const client = createWorkerClient(spawn);
     const promise = client.run("json", "huge", {});
 
     vi.advanceTimersByTime(TIMEOUT_MS);
 
-    await expect(promise).resolves.toEqual({ ok: false, error: { message: "Formatting took too long (over 15 seconds)", line: 1 } });
+    // A failure with no position: a timeout says nothing about line 1 of the input.
+    await expect(promise).resolves.toEqual({
+      kind: "failed",
+      reason: "timeout",
+      message: "Formatting took too long (over 15 seconds)",
+    });
     expect(workers[0].terminated).toBe(1);
   });
 
@@ -137,7 +164,7 @@ describe("createWorkerClient", () => {
     const crashed = client.run("json", "bad", {});
 
     workers[0].crash();
-    await expect(crashed).resolves.toEqual({ ok: false, error: { message: "The formatter stopped unexpectedly. Try again.", line: 1 } });
+    await expect(crashed).resolves.toEqual({ kind: "failed", reason: "crashed", message: "The formatter stopped unexpectedly" });
 
     const retry = client.run("json", "good", {});
     expect(spawn).toHaveBeenCalledTimes(2);
@@ -149,7 +176,7 @@ describe("createWorkerClient", () => {
     const client = createWorkerClient(spawn);
     const promise = client.run("json", "A", {});
 
-    workers[0].respond(9999, failure("stray"));
+    workers[0].respond(9999, invalid("stray"));
     workers[0].respond(workers[0].posted[0].id, ok("A done"));
 
     await expect(promise).resolves.toEqual(ok("A done"));
@@ -171,7 +198,14 @@ describe("createWorkerClient", () => {
 
     client.dispose();
 
-    await expect(promise).resolves.toEqual({ ok: false, error: { message: "Superseded", line: 1 } });
+    await expect(promise).resolves.toEqual({ kind: "cancelled" });
     expect(workers[0].terminated).toBe(1);
+  });
+
+  it("passes the worker's invalid-input result through unchanged", async () => {
+    const client = createWorkerClient(spawn);
+    const promise = client.run("json", "{", {});
+    workers[0].respond(workers[0].posted[0].id, invalid("Expected }"));
+    await expect(promise).resolves.toEqual(invalid("Expected }"));
   });
 });
