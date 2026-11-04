@@ -76,3 +76,13 @@ Nothing else changes. The route (`/toml`), capsule button, tagline word, file ex
 ## Loading
 
 Every format-specific piece loads on demand: the formatter (`definition.load()`), the editor language and the preview (`format-ui.ts`). So opening `/json` downloads no SQL grammar, Markdown renderer or Mermaid.
+
+## Guardrails
+
+Three checks keep the rules above true over time. All run in CI (`.github/workflows/ci.yml`) on every pull request and on `main`.
+
+- **CI** runs `lint` (including the core/UI import rules), `typecheck`, `test`, `test:perf` and `build`. `typecheck` runs `next typegen` first: `PageProps` and `LayoutProps` are global types Next generates into `.next/types`, so a plain `tsc` fails on a fresh checkout.
+- **Performance budgets** (`tests/perf/`, run with `npm run test:perf`) format generated 256 KB to 1 MB inputs in plain Node and fail if a formatter gets about 3x slower than measured. They are regression tripwires, not product targets; measured numbers are in the test file. A timeout cannot interrupt synchronous code, so the cheap JSON guard runs first with `bail: 1`, and the CI job's `timeout-minutes` is the outer kill switch (the same reason `workerClient` terminates its worker).
+- **Content Security Policy** (`src/lib/csp.ts`, added as a `<meta>` tag in production builds). `connect-src 'self'` is what makes "nothing you paste leaves the page" enforced by the browser rather than promised. Limits of a `<meta>` policy on a static export: `script-src` needs `'unsafe-inline'` for Next's bootstrap scripts (no server, so no nonces); Next puts its own script tags before the tag, so their fetches are not covered; `frame-ancestors` and reporting are ignored. A policy sent as an HTTP header by the host would close those gaps. `img-src` allows `https:` only for Markdown preview's click-to-load remote images.
+
+Known performance limits (from the measurements, not yet fixed): `xml-formatter` is quadratic (about 3 s at 1 MB), SQL and Markdown grow faster than linearly, and Markdown takes about 13 s at 1 MB, close to the worker's 15 s timeout. Every format except JSON takes more than 300 ms at 256 KB, which is the worker client's supersede threshold.
