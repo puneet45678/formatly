@@ -50,10 +50,25 @@ export async function renderMermaid(source: string): Promise<FormatResult> {
   }
 }
 
-/** Only the first line: Mermaid's messages continue with an ASCII-art pointer that wraps badly in the UI. */
+/**
+ * Mermaid's own message starts with "Parse error on line N:", where N counts differently from the
+ * position we show, and is followed by ASCII art. So for parser errors we write our own sentence.
+ */
 function errorMessage(err: unknown): string {
   const text = err instanceof Error ? err.message : String(err);
-  return text.split("\n")[0] || "Invalid diagram";
+  const lines = text.split("\n").filter((line) => line.trim() !== "");
+  const lastLine = lines.at(-1) ?? "";
+
+  // Jison parsers (flowchart, sequence, ...) attach hash = { text, token, line, loc, expected }.
+  const hash = (err as { hash?: { token?: unknown; text?: unknown } } | null)?.hash;
+  if (hash && typeof hash === "object") {
+    if (hash.token === "EOF" || /got 'EOF'$/.test(lastLine)) return "The diagram ends before it is complete";
+    if (typeof hash.text === "string" && hash.text !== "") return `Unexpected "${hash.text}"`;
+  }
+  // No usable hash: Mermaid's last line says what it wanted, e.g. "Expecting 'SQE', got 'PS'".
+  if (lastLine.startsWith("Expecting")) return lastLine;
+  // Anything else (e.g. unknown diagram type) already has a readable first line.
+  return lines[0] ?? "Invalid diagram";
 }
 
 /** Finds where Mermaid says the error is: the parser's location, else "line N" in the message, else line 1. */

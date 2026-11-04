@@ -39,18 +39,57 @@ describe("renderMermaid", () => {
     expect(mock.render).toHaveBeenCalledWith(expect.stringMatching(/^formatly-mermaid-\d+$/), "graph TD; A-->B");
   });
 
-  it("reports syntax errors with the line from the parser", async () => {
+  // Shaped like real jison parser errors: Error(message) with hash = { text, token, line, loc, expected }.
+  const jisonError = (message: string, hash: object) => Object.assign(new Error(message), { hash });
+
+  it("says the diagram ends early when the parser hits EOF", async () => {
     mock.parse.mockRejectedValue(
-      Object.assign(new Error("Parse error on line 3:\n...A-->\n-----^\nExpected NODE"), {
-        hash: { loc: { first_line: 3, first_column: 4 } },
+      jisonError("Parse error on line 2:\ngraph TD; A-->\n--------------^\nExpecting 'AMP', 'SEMI', got 'EOF'", {
+        token: "EOF",
+        text: "",
+        expected: ["'AMP'", "'SEMI'"],
+        loc: { first_line: 1, first_column: 11 },
       }),
     );
     const { renderMermaid } = await freshModule();
-    expect(await renderMermaid("graph TD\nA\nA-->")).toEqual({
+    expect(await renderMermaid("graph TD; A-->")).toEqual({
       ok: false,
-      error: { message: "Parse error on line 3:", line: 3, column: 5 },
+      error: { message: "The diagram ends before it is complete", line: 1, column: 12 },
     });
     expect(mock.render).not.toHaveBeenCalled();
+  });
+
+  it("names the unexpected text instead of Mermaid's header line", async () => {
+    mock.parse.mockRejectedValue(
+      jisonError("Parse error on line 5:\n...\n-----^\nExpecting 'SQE', got 'PS'", {
+        token: "PS",
+        text: "[",
+        loc: { first_line: 3, first_column: 10 },
+      }),
+    );
+    const { renderMermaid } = await freshModule();
+    expect(await renderMermaid("x")).toEqual({
+      ok: false,
+      error: { message: 'Unexpected "["', line: 3, column: 11 },
+    });
+  });
+
+  it("uses the Expecting line when there is no hash", async () => {
+    mock.parse.mockRejectedValue(new Error("Parse error on line 2:\nA--\n--^\nExpecting 'X', got 'Y'\n"));
+    const { renderMermaid } = await freshModule();
+    expect(await renderMermaid("x")).toEqual({
+      ok: false,
+      error: { message: "Expecting 'X', got 'Y'", line: 2 },
+    });
+  });
+
+  it("detects EOF from the message when the hash has no token", async () => {
+    mock.parse.mockRejectedValue(jisonError("Parse error on line 1:\nA\n^\nExpecting 'X', got 'EOF'", {}));
+    const { renderMermaid } = await freshModule();
+    expect(await renderMermaid("x")).toEqual({
+      ok: false,
+      error: { message: "The diagram ends before it is complete", line: 1 },
+    });
   });
 
   it("falls back to the line in the message", async () => {
