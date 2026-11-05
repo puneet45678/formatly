@@ -45,3 +45,8 @@ jobs:
 
       - name: Build static export
         run: npm run build
+
+      - name: Build the MCP server and check it over stdio
+        run: |
+          npm run build:mcp
+          npm run test:mcp

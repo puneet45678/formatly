@@ -119,3 +119,7 @@ Each format page is static HTML with the tool at full height and, below it, a gu
 
 **Deployment needs `NEXT_PUBLIC_SITE_URL`** (for example `https://formatly.dev`). Canonical links, `og:url`, the sitemap's entries and its line in `robots.txt` need the real address; without it they are left out rather than pointing at a guessed one, and the build still succeeds.
 
+## AI assistants: the MCP server
+
+`mcp/` is a second consumer of the core, next to the website: an [MCP](https://modelcontextprotocol.io) server that gives assistants a `format` tool for the text formats (Mermaid needs a browser, so it isn't offered). It calls `formatInput`, like the worker does, so assistants get the website's exact behaviour, and it runs on the user's machine, so nothing is sent anywhere. Like the core, it may not import React, Next.js or UI code (an ESLint rule). See `mcp/README.md` and [ADR 0003](adr/0003-assistants-use-a-local-mcp-server.md).
+
