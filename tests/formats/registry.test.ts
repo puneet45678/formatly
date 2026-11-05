@@ -77,15 +77,32 @@ describe("format registry", () => {
   });
 
   it("defaultSettings fills each setting", () => {
-    expect(defaultSettings("sql")).toEqual({ dialect: "sql" });
-    expect(defaultSettings("json")).toEqual({});
+    expect(defaultSettings("sql")).toEqual({ dialect: "sql", indent: "2" });
+    expect(defaultSettings("json")).toEqual({ indent: "2" });
+    expect(defaultSettings("markdown")).toEqual({});
   });
 
   it("ignores unknown or corrupt stored settings", () => {
-    expect(sanitizeSettings("sql", { dialect: "oracle", extra: "x" })).toEqual({ dialect: "sql" });
-    expect(sanitizeSettings("sql", "not an object")).toEqual({ dialect: "sql" });
-    expect(sanitizeSettings("sql", null)).toEqual({ dialect: "sql" });
-    expect(sanitizeSettings("sql", ["mysql"])).toEqual({ dialect: "sql" });
-    expect(sanitizeSettings("sql", { dialect: "mysql" })).toEqual({ dialect: "mysql" });
+    const sqlDefaults = { dialect: "sql", indent: "2" };
+    expect(sanitizeSettings("sql", { dialect: "oracle", extra: "x" })).toEqual(sqlDefaults);
+    expect(sanitizeSettings("sql", "not an object")).toEqual(sqlDefaults);
+    expect(sanitizeSettings("sql", null)).toEqual(sqlDefaults);
+    expect(sanitizeSettings("sql", ["mysql"])).toEqual(sqlDefaults);
+    expect(sanitizeSettings("sql", { dialect: "mysql" })).toEqual({ dialect: "mysql", indent: "2" });
+    // Settings stored before indent existed still load, with the default indent.
+    expect(sanitizeSettings("json", {})).toEqual({ indent: "2" });
+  });
+
+  it("offers tabs everywhere indent is offered except YAML, which forbids them", () => {
+    const indentOptions = Object.fromEntries(
+      FORMATS.flatMap((f) => f.settings.filter((s) => s.key === "indent").map((s) => [f.id, s.options.map((o) => o.value)])),
+    );
+    expect(indentOptions).toEqual({
+      json: ["2", "4", "tab"],
+      yaml: ["2", "4"],
+      xml: ["2", "4", "tab"],
+      sql: ["2", "4", "tab"],
+    });
+    expect(sanitizeSettings("yaml", { indent: "tab" })).toEqual({ indent: "2" });
   });
 });

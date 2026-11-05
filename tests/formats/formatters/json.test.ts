@@ -79,4 +79,16 @@ describe("formatJson", () => {
 
   it("ignores escaped quotes when skipping strings", () =>
     expect(formatJson(JSON.stringify({ s: '\\"' + "[".repeat(5000) })).ok).toBe(true));
+
+  it("indents with the chosen width or tabs", () => {
+    const input = '{"a":{"b":1}}';
+    expect(formatJson(input, { indent: "2" })).toEqual({ ok: true, output: '{\n  "a": {\n    "b": 1\n  }\n}' });
+    expect(formatJson(input, { indent: "4" })).toEqual({ ok: true, output: '{\n    "a": {\n        "b": 1\n    }\n}' });
+    expect(formatJson(input, { indent: "tab" })).toEqual({ ok: true, output: '{\n\t"a": {\n\t\t"b": 1\n\t}\n}' });
+  });
+
+  it("re-indents already formatted JSON when the width changes", () => {
+    const twoSpaces = '{\n  "a": [\n    1\n  ]\n}';
+    expect(formatJson(twoSpaces, { indent: "4" })).toEqual({ ok: true, output: '{\n    "a": [\n        1\n    ]\n}' });
+  });
 });

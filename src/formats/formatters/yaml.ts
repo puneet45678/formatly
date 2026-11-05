@@ -1,16 +1,15 @@
 import { parseAllDocuments } from "yaml";
 import { formatError } from "../errors";
-import type { FormatResult } from "../types";
+import type { FormatResult, FormatSettings } from "../types";
 
 // The yaml library keeps quote styles, comments and "---" markers when it
 // writes a document back out, so formatting is just parse + print.
-// The settings argument is ignored, so this fits the Formatter type with one parameter.
 
 // The library puts "at line 3, column 1:" at the end of the first line of its
 // messages. We report the position separately, so drop it from the text.
 const POSITION_SUFFIX = / at line \d+, column \d+:?$/;
 
-export function formatYaml(input: string): FormatResult {
+export function formatYaml(input: string, settings: FormatSettings = {}): FormatResult {
   // A file can hold several documents separated by "---"; each is parsed on its own.
   const docs = parseAllDocuments(input);
 
@@ -23,5 +22,6 @@ export function formatYaml(input: string): FormatResult {
   }
 
   // lineWidth: 0 turns off line wrapping, which would otherwise re-flow long lines.
-  return { ok: true, output: docs.map((doc) => doc.toString({ indent: 2, lineWidth: 0 })).join("") };
+  const indent = Number(settings.indent ?? 2);
+  return { ok: true, output: docs.map((doc) => doc.toString({ indent, lineWidth: 0 })).join("") };
 }
