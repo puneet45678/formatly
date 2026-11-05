@@ -59,4 +59,10 @@ describe("formatSql", () => {
     if (!first.ok) throw new Error("expected ok");
     expect(formatSql(first.output, { dialect: "mysql" })).toEqual(first);
   });
+
+  it("indents with the chosen width or tabs", () => {
+    const input = "select a from t";
+    expect(formatSql(input, { dialect: "sql", indent: "4" })).toEqual({ ok: true, output: "SELECT\n    a\nFROM\n    t" });
+    expect(formatSql(input, { dialect: "sql", indent: "tab" })).toEqual({ ok: true, output: "SELECT\n\ta\nFROM\n\tt" });
+  });
 });

@@ -1,0 +1,11 @@
+{
+  "name": "formatly-mcp",
+  "version": "0.1.0",
+  "description": "formatly's formatters for AI assistants: format and validate JSON, YAML, XML, SQL and Markdown over MCP. Runs locally; nothing is sent anywhere.",
+  "keywords": ["mcp", "model-context-protocol", "formatter", "json", "yaml", "xml", "sql", "markdown"],
+  "repository": { "type": "git", "url": "git+https://github.com/puneet45678/formatly.git", "directory": "mcp" },
+  "type": "commonjs",
+  "bin": { "formatly-mcp": "dist/formatly-mcp.cjs" },
+  "files": ["dist", "README.md"],
+  "engines": { "node": ">=20" }
+}

@@ -1,4 +1,5 @@
 import type { FormatDefinition } from "../types";
+import { indentSpacesSetting } from "./indent";
 
 export const yaml = {
   id: "yaml",
@@ -8,7 +9,7 @@ export const yaml = {
   mime: "application/yaml",
   output: "text",
   runsOn: "worker",
-  settings: [],
+  settings: [indentSpacesSetting],
   examples: {
     valid: "server:\n    port: 8080\n    tags: ['a', \"b\"]  # note\n",
     invalid: "a: 1\nc: [1, 2\n",

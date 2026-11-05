@@ -42,3 +42,6 @@ next-env.d.ts
 
 # superpowers
 .superpowers/
+
+# MCP server bundle (npm run build:mcp)
+/mcp/dist/

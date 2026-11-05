@@ -12,7 +12,7 @@ import { FIXTURES } from "./fixtures";
 // Measured medians, Node 22, for reference:
 //   json      256KB=41ms   512KB=51ms    1MB=99ms
 //   yaml      256KB=321ms  512KB=603ms   1MB=1120ms
-//   xml       256KB=191ms  512KB=754ms   1MB=3091ms   quadratic: xml-formatter
+//   xml       256KB=52ms   512KB=66ms    1MB=105ms    was 191/754/3091 ms (quadratic) before patches/xml-parser-xo
 //   sql       256KB=759ms  512KB=1672ms  1MB=5366ms   superlinear
 //   markdown  256KB=1889ms 512KB=4230ms  1MB=13123ms  superlinear, near the 15 s worker timeout
 //
@@ -26,7 +26,8 @@ type Budget = { format: FormatId & keyof typeof FIXTURES; bytes: number; maxMs: 
 const BUDGETS: Budget[] = [
   { format: "json", bytes: 1024 * KB, maxMs: 500 },
   { format: "yaml", bytes: 512 * KB, maxMs: 2_000 },
-  { format: "xml", bytes: 256 * KB, maxMs: 1_000 },
+  // The unpatched parser takes ~757 ms here, so this also guards patches/xml-parser-xo+4.1.6.patch.
+  { format: "xml", bytes: 512 * KB, maxMs: 300 },
   { format: "sql", bytes: 256 * KB, maxMs: 2_500 },
   { format: "markdown", bytes: 256 * KB, maxMs: 6_000 },
 ];

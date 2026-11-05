@@ -70,20 +70,22 @@ Dependencies point one way: **UI → core, never core → UI.** "Core" is `src/f
 
 ## How adding a format works
 
-Say you want to add TOML. It is exactly four files:
+Say you want to add TOML. It is exactly five files:
 
 1. **Formatter.** Create `src/formats/formatters/toml.ts` exporting a `Formatter`: `formatToml(input, settings): FormatResult`. Return `{ ok: true, output }`, or `formatError(message, line, column?)` from `../errors`. The `settings` parameter can be left out if you don't use it. Copy `formatters/xml.ts` as a model.
 2. **Definition.** Create `src/formats/definitions/toml.ts`. Copy `definitions/xml.ts` and change the fields: `id`, `label`, `glyph` (the capsule symbol), `extension`, `mime`, `output` (`"text"`, or `"diagram"` for rendered SVG), `runsOn` (`"worker"` unless it needs the DOM), `settings` (`[]` for none), `examples` (`valid` and `invalid` input) and `load: () => import("../formatters/toml").then((m) => m.formatToml)`. Keep the `as const satisfies FormatDefinition` ending: it keeps `id` a literal type. If every text is valid input, set `examples.invalid` to `""`.
 3. **Register it.** In `src/formats/definitions/index.ts`, import the definition and add it to the `FORMATS` array. Its position in the array is its position in the capsule.
 4. **UI entry.** Add one entry to `FORMAT_UI` in `src/components/format-ui.ts`. Use a CodeMirror language package if one exists (`import("@codemirror/lang-…")`), or `language: async () => []` for plain text, as Mermaid does. You can't forget this step: `FORMAT_UI` is a `Record<FormatId, …>`, so TypeScript refuses to compile until the entry exists.
 
-Nothing else changes. The route (`/toml`), capsule button, tagline word, file extension, worker dispatch and the shared contract tests all pick it up from the definition.
+5. **Guide.** Add a `toml` entry to `GUIDES` in `src/content/guides.ts`: the page title, description, search aliases, intro, features and questions. Like `FORMAT_UI`, it's a `Record<FormatId, …>`, so the build fails until it exists. Write only what the tool really does: search engines and chatbots repeat it.
+
+Nothing else changes. The route (`/toml`), capsule button, tagline word, file extension, worker dispatch and the shared contract tests all pick it up from the definition; the page metadata, sitemap entry, structured data and `llms.txt` line come from the guide.
 
 **The contract tests.** `tests/formats/contract.test.ts` loops over every `runsOn: "worker"` definition and checks three things with its `examples`: the valid example formats to non-empty output; formatting that output again changes nothing (stable); and the invalid example is rejected with a message and a line number inside the input. You write no test code for these. (Mermaid runs on the main thread, so it has its own test in `tests/formats/formatters/mermaid.test.ts`.) Add a `tests/formats/formatters/<id>.test.ts` for format-specific behaviour.
 
 **Existing tests that list the formats.** A few older tests spell out the current set of formats on purpose (the registry order, labels, glyphs and extensions, the format rail, the tagline words, the empty-inputs state). Adding a format makes them fail until you add it to those lists. That is the tests doing their job, not a fifth place to edit in the app.
 
-- **A per-format setting** (like the SQL dialect) is one entry in the definition's `settings` array. The dropdown, the per-format storage (`formatly:settings:<id>`), cleaning up bad stored values and passing the value to the formatter all happen automatically.
+- **A per-format setting** (like the SQL dialect, or the shared indent choice in `definitions/indent.ts`) is one entry in the definition's `settings` array. Settings are choices from a fixed list; see [ADR 0002](adr/0002-settings-stay-string-choices.md) for why they aren't typed numbers or booleans. The dropdown, the per-format storage (`formatly:settings:<id>`), cleaning up bad stored values and passing the value to the formatter all happen automatically.
 - **A preview** (like Markdown's rendered view) is one line in `format-ui.ts`: `preview: () => import("./TomlPreview").then((m) => m.TomlPreview)`. The output pane then shows Preview / Source buttons and loads the component only when it's first shown.
 
 ## Loading
@@ -98,4 +100,26 @@ Three checks keep the rules above true over time. All run in CI (`.github/workfl
 - **Performance budgets** (`tests/perf/`, run with `npm run test:perf`) format generated 256 KB to 1 MB inputs in plain Node and fail if a formatter gets about 3x slower than measured. They are regression tripwires, not product targets; measured numbers are in the test file. A timeout cannot interrupt synchronous code, so the cheap JSON guard runs first with `bail: 1`, and the CI job's `timeout-minutes` is the outer kill switch (the same reason `workerClient` terminates its worker).
 - **Content Security Policy** (`src/lib/csp.ts`, added as a `<meta>` tag in production builds). `connect-src 'self'` is what makes "nothing you paste leaves the page" enforced by the browser rather than promised. Limits of a `<meta>` policy on a static export: `script-src` needs `'unsafe-inline'` for Next's bootstrap scripts (no server, so no nonces); Next puts its own script tags before the tag, so their fetches are not covered; `frame-ancestors` and reporting are ignored. A policy sent as an HTTP header by the host would close those gaps. `img-src` allows `https:` only for Markdown preview's click-to-load remote images.
 
-Known performance limits (from the measurements, not yet fixed): `xml-formatter` is quadratic (about 3 s at 1 MB), SQL and Markdown grow faster than linearly, and Markdown takes about 13 s at 1 MB, close to the worker's 15 s timeout. These are what limit live formatting of large inputs: no cancellation policy can show fresh output faster than the formatter produces it.
+Known performance limits (from the measurements, not yet fixed): SQL and Markdown grow faster than linearly, and Markdown takes about 13 s at 1 MB, close to the worker's 15 s timeout. These are what limit live formatting of large inputs: no cancellation policy can show fresh output faster than the formatter produces it.
+
+### Patched dependencies
+
+`patches/` holds fixes to dependencies, applied by `patch-package` on every `npm install` and `npm ci` (the `postinstall` script). A patch names an exact version, so a dependency upgrade that no longer matches fails the install loudly instead of silently dropping the fix.
+
+- **`xml-parser-xo+4.1.6.patch`**: its `is(prefix)` used `indexOf(prefix) === 0`, which scans the whole remaining input whenever the prefix isn't there. Called for every attribute loop, that made XML formatting quadratic: 3.1 s at 1 MB, now about 105 ms, with byte-identical output. Remove the patch once upstream switches to `startsWith`; the XML perf budget fails if the slow version returns.
+
+## Discoverability (search engines and chatbots)
+
+Each format page is static HTML with the tool at full height and, below it, a guide rendered on the server: a heading, what the tool does and common questions. Everything describing a page comes from `src/content/guides.ts`, so these never disagree:
+
+- `<title>`, meta description, keywords, Open Graph and Twitter tags (`app/[format]/page.tsx`)
+- JSON-LD: a `WebApplication` and a `FAQPage` per format (`components/FormatGuide.tsx`)
+- `sitemap.xml`, `robots.txt` (which names the main AI crawlers and allows them) and `llms.txt`, a plain-text summary for AI assistants (`app/sitemap.ts`, `app/robots.ts`, `app/llms.txt/route.ts`)
+- `/` is an index of every formatter in its HTML, and then sends returning visitors to the format they used last
+
+**Deployment needs `NEXT_PUBLIC_SITE_URL`** (for example `https://formatly.dev`). Canonical links, `og:url`, the sitemap's entries and its line in `robots.txt` need the real address; without it they are left out rather than pointing at a guessed one, and the build still succeeds.
+
+## AI assistants: the MCP server
+
+`mcp/` is a second consumer of the core, next to the website: an [MCP](https://modelcontextprotocol.io) server that gives assistants a `format` tool for the text formats (Mermaid needs a browser, so it isn't offered). It calls `formatInput`, like the worker does, so assistants get the website's exact behaviour, and it runs on the user's machine, so nothing is sent anywhere. Like the core, it may not import React, Next.js or UI code (an ESLint rule). See `mcp/README.md` and [ADR 0003](adr/0003-assistants-use-a-local-mcp-server.md).
+

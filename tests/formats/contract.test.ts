@@ -33,6 +33,17 @@ describe.each(cases.map((c) => [c.f.id, c] as const))("formatter contract: %s", 
     expect(second).toEqual({ kind: "ok", output: first.output });
   });
 
+  // Every option of every setting, one at a time: a new setting is covered without new test code.
+  const variants = f.settings.flatMap((s) => s.options.map((o) => ({ ...settings, [s.key]: o.value })));
+  it.skipIf(isStub || variants.length === 0)("formats its valid example, stably, with every setting option", async () => {
+    for (const variant of variants) {
+      const first = await formatInput(f.id, f.examples.valid, variant);
+      expect(first.kind, JSON.stringify(variant)).toBe("ok");
+      if (first.kind !== "ok") continue;
+      expect(await formatInput(f.id, first.output, variant), JSON.stringify(variant)).toEqual(first);
+    }
+  });
+
   it.skipIf(isStub || f.examples.invalid === "")("rejects its invalid example with a usable position", async () => {
     const result = await formatInput(f.id, f.examples.invalid, settings);
     // A syntax error with a position, not a crash or timeout.

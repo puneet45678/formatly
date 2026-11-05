@@ -21,7 +21,9 @@ export function formatSql(input: string, settings: FormatSettings): FormatResult
   try {
     // The cast is needed because FormatSettings values are plain strings;
     // the definition only offers ids sql-formatter knows.
-    return { ok: true, output: format(input, { language: dialect as "sql", keywordCase: "upper" }) };
+    const useTabs = settings.indent === "tab";
+    const tabWidth = useTabs ? 2 : Number(settings.indent ?? 2);
+    return { ok: true, output: format(input, { language: dialect as "sql", keywordCase: "upper", tabWidth, useTabs }) };
   } catch (error) {
     const full = error instanceof Error ? error.message : String(error);
     const match = POSITION.exec(full);
