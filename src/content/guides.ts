@@ -116,6 +116,11 @@ export const GUIDES: Record<FormatId, FormatGuide> = {
         question: "Can I use the diagram elsewhere?",
         answer: "Yes. Download it as an SVG to edit or embed, or as a PNG image.",
       },
+      {
+        question: "Can I preview Mermaid inside a Markdown document?",
+        answer:
+          "Yes. On the Markdown formatter, a ```mermaid code block is drawn as a diagram in the preview, the way GitHub shows it. A diagram with an error shows its source and the problem, and the rest of the document still renders.",
+      },
     ],
   },
   xml: {
@@ -178,13 +183,14 @@ export const GUIDES: Record<FormatId, FormatGuide> = {
     title: "Markdown Formatter & Preview",
     description:
       "Format Markdown consistently with Prettier and preview it, including tables and task lists. Runs in your browser; nothing is uploaded.",
-    aliases: ["Markdown beautifier", "Markdown preview", "Markdown viewer", "Prettier Markdown"],
+    aliases: ["Markdown beautifier", "Markdown preview", "Markdown viewer", "Prettier Markdown", "Markdown with Mermaid preview"],
     heading: "Markdown formatter and preview",
     intro:
       "Paste Markdown to tidy it the way Prettier does, then read it rendered. Switch between the preview and the formatted source at any time.",
     features: [
       "Formatting by Prettier, the formatter most projects use",
       "Rendered preview with GitHub-style tables, task lists and strikethrough",
+      "Mermaid diagrams in ```mermaid code blocks are drawn in the preview, as on GitHub",
       "Raw HTML in the Markdown isn't rendered, and remote images load only when you click",
       "Copy the formatted source or download it as a .md file",
     ],

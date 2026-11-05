@@ -171,6 +171,28 @@ body {
   padding: 12px 14px;
   overflow-x: auto;
 }
+/* A diagram drawn from a ```mermaid block. Wide diagrams scroll sideways. */
+.md-preview .md-diagram {
+  display: flex;
+  justify-content: center;
+  overflow-x: auto;
+  margin: 1em 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.md-preview .md-diagram svg {
+  max-width: 100%;
+  height: auto;
+}
+.md-preview .md-diagram-source {
+  margin: 1em 0;
+}
+.md-preview .md-diagram-source figcaption {
+  margin-top: 6px;
+  font-family: var(--font-jetbrains-mono), monospace;
+  font-size: 12px;
+}
 .md-preview table {
   border-collapse: collapse;
   display: block;
