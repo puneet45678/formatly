@@ -3,15 +3,23 @@ import { Inter, JetBrains_Mono } from "next/font/google";
 import { TopBar } from "@/components/TopBar";
 import KineticGrid from "@/components/ui/kinetic-grid";
 import { CONTENT_SECURITY_POLICY } from "@/lib/csp";
+import { SITE_DESCRIPTION, SITE_NAME, siteUrl } from "@/lib/site";
 import { WorkbenchProvider } from "@/state/WorkbenchContext";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 const jetbrainsMono = JetBrains_Mono({ variable: "--font-jetbrains-mono", subsets: ["latin"] });
 
+const base = siteUrl();
+
 export const metadata: Metadata = {
-  title: "formatly",
-  description: "Format JSON, YAML, Mermaid, XML, SQL and Markdown in one place. Runs entirely in your browser.",
+  // Lets pages give canonical and Open Graph URLs as paths. Only when the site URL is known.
+  ...(base ? { metadataBase: new URL(base) } : {}),
+  title: { default: `${SITE_NAME}: JSON, YAML, XML, SQL, Markdown and Mermaid formatters`, template: `%s · ${SITE_NAME}` },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  openGraph: { siteName: SITE_NAME, type: "website" },
+  twitter: { card: "summary" },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -26,7 +34,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex h-dvh flex-col font-sans">
         <KineticGrid />
         <TopBar />
-        <WorkbenchProvider>{children}</WorkbenchProvider>
+        <WorkbenchProvider>
+          {/* Scrolls under the top bar: a format page puts its tool at full height, with its guide below. */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+        </WorkbenchProvider>
       </body>
     </html>
   );

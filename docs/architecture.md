@@ -70,14 +70,16 @@ Dependencies point one way: **UI → core, never core → UI.** "Core" is `src/f
 
 ## How adding a format works
 
-Say you want to add TOML. It is exactly four files:
+Say you want to add TOML. It is exactly five files:
 
 1. **Formatter.** Create `src/formats/formatters/toml.ts` exporting a `Formatter`: `formatToml(input, settings): FormatResult`. Return `{ ok: true, output }`, or `formatError(message, line, column?)` from `../errors`. The `settings` parameter can be left out if you don't use it. Copy `formatters/xml.ts` as a model.
 2. **Definition.** Create `src/formats/definitions/toml.ts`. Copy `definitions/xml.ts` and change the fields: `id`, `label`, `glyph` (the capsule symbol), `extension`, `mime`, `output` (`"text"`, or `"diagram"` for rendered SVG), `runsOn` (`"worker"` unless it needs the DOM), `settings` (`[]` for none), `examples` (`valid` and `invalid` input) and `load: () => import("../formatters/toml").then((m) => m.formatToml)`. Keep the `as const satisfies FormatDefinition` ending: it keeps `id` a literal type. If every text is valid input, set `examples.invalid` to `""`.
 3. **Register it.** In `src/formats/definitions/index.ts`, import the definition and add it to the `FORMATS` array. Its position in the array is its position in the capsule.
 4. **UI entry.** Add one entry to `FORMAT_UI` in `src/components/format-ui.ts`. Use a CodeMirror language package if one exists (`import("@codemirror/lang-…")`), or `language: async () => []` for plain text, as Mermaid does. You can't forget this step: `FORMAT_UI` is a `Record<FormatId, …>`, so TypeScript refuses to compile until the entry exists.
 
-Nothing else changes. The route (`/toml`), capsule button, tagline word, file extension, worker dispatch and the shared contract tests all pick it up from the definition.
+5. **Guide.** Add a `toml` entry to `GUIDES` in `src/content/guides.ts`: the page title, description, search aliases, intro, features and questions. Like `FORMAT_UI`, it's a `Record<FormatId, …>`, so the build fails until it exists. Write only what the tool really does: search engines and chatbots repeat it.
+
+Nothing else changes. The route (`/toml`), capsule button, tagline word, file extension, worker dispatch and the shared contract tests all pick it up from the definition; the page metadata, sitemap entry, structured data and `llms.txt` line come from the guide.
 
 **The contract tests.** `tests/formats/contract.test.ts` loops over every `runsOn: "worker"` definition and checks three things with its `examples`: the valid example formats to non-empty output; formatting that output again changes nothing (stable); and the invalid example is rejected with a message and a line number inside the input. You write no test code for these. (Mermaid runs on the main thread, so it has its own test in `tests/formats/formatters/mermaid.test.ts`.) Add a `tests/formats/formatters/<id>.test.ts` for format-specific behaviour.
 
@@ -105,4 +107,15 @@ Known performance limits (from the measurements, not yet fixed): SQL and Markdow
 `patches/` holds fixes to dependencies, applied by `patch-package` on every `npm install` and `npm ci` (the `postinstall` script). A patch names an exact version, so a dependency upgrade that no longer matches fails the install loudly instead of silently dropping the fix.
 
 - **`xml-parser-xo+4.1.6.patch`**: its `is(prefix)` used `indexOf(prefix) === 0`, which scans the whole remaining input whenever the prefix isn't there. Called for every attribute loop, that made XML formatting quadratic: 3.1 s at 1 MB, now about 105 ms, with byte-identical output. Remove the patch once upstream switches to `startsWith`; the XML perf budget fails if the slow version returns.
+
+## Discoverability (search engines and chatbots)
+
+Each format page is static HTML with the tool at full height and, below it, a guide rendered on the server: a heading, what the tool does and common questions. Everything describing a page comes from `src/content/guides.ts`, so these never disagree:
+
+- `<title>`, meta description, keywords, Open Graph and Twitter tags (`app/[format]/page.tsx`)
+- JSON-LD: a `WebApplication` and a `FAQPage` per format (`components/FormatGuide.tsx`)
+- `sitemap.xml`, `robots.txt` (which names the main AI crawlers and allows them) and `llms.txt`, a plain-text summary for AI assistants (`app/sitemap.ts`, `app/robots.ts`, `app/llms.txt/route.ts`)
+- `/` is an index of every formatter in its HTML, and then sends returning visitors to the format they used last
+
+**Deployment needs `NEXT_PUBLIC_SITE_URL`** (for example `https://formatly.dev`). Canonical links, `og:url`, the sitemap's entries and its line in `robots.txt` need the real address; without it they are left out rather than pointing at a guessed one, and the build still succeeds.
 
