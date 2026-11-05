@@ -88,9 +88,13 @@ export function OutputPane({ format, state, expanded = false, onToggleExpand }: 
         </div>
         <div className="flex items-center gap-2">
           <span aria-live="polite">
-            {state.status === "ok" && <span className="status status-ok">Valid</span>}
-            {state.status === "invalid" && <span className="status status-error">Error</span>}
-            {state.status === "failed" && <span className="status status-failed">Couldn&apos;t format</span>}
+            {/* While a newer result is late, the old status describes old input: don't show it. */}
+            {state.pending && <span className="status status-pending">Formatting…</span>}
+            {!state.pending && state.status === "ok" && <span className="status status-ok">Valid</span>}
+            {!state.pending && state.status === "invalid" && <span className="status status-error">Error</span>}
+            {!state.pending && state.status === "failed" && (
+              <span className="status status-failed">Couldn&apos;t format</span>
+            )}
           </span>
           <OutputActions format={format} state={state} />
           {onToggleExpand && (
@@ -107,7 +111,13 @@ export function OutputPane({ format, state, expanded = false, onToggleExpand }: 
           )}
         </div>
       </div>
-      <OutputBody format={format} state={state} view={view} />
+      {/* The previous result stays readable while the next one formats, dimmed so it isn't taken as current. */}
+      <div
+        className={cn("flex min-h-0 flex-1 flex-col transition-opacity", state.pending && state.status !== "empty" && "opacity-50")}
+        aria-busy={state.pending ?? false}
+      >
+        <OutputBody format={format} state={state} view={view} />
+      </div>
     </section>
   );
 }
@@ -115,7 +125,9 @@ export function OutputPane({ format, state, expanded = false, onToggleExpand }: 
 function OutputBody({ format, state, view }: OutputPaneProps & { view: OutputView }) {
   switch (state.status) {
     case "empty":
-      return <p className="p-3.5 text-[12.5px] text-dim">Paste {format.label} on the left</p>;
+      return (
+        <p className="p-3.5 text-[12.5px] text-dim">{state.pending ? "Formatting…" : `Paste ${format.label} on the left`}</p>
+      );
     case "invalid":
       return (
         <p aria-live="polite" className="p-3.5 font-mono text-xs text-err">
