@@ -10,7 +10,8 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:perf": "vitest run --config vitest.perf.config.ts"
+    "test:perf": "vitest run --config vitest.perf.config.ts",
+    "postinstall": "patch-package"
   },
   "dependencies": {
     "@codemirror/lang-json": "^6.0.2",
@@ -52,6 +53,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
     "jsdom": "^29.1.1",
+    "patch-package": "8.0.1",
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^5.1.0"
