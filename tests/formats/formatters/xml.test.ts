@@ -40,4 +40,10 @@ describe("formatXml", () => {
     }));
 
   it("rejects text that is not XML", () => expect(formatXml("hello").ok).toBe(false));
+
+  it("indents with the chosen width or tabs", () => {
+    const input = "<a><b>t</b></a>";
+    expect(formatXml(input, { indent: "4" })).toEqual({ ok: true, output: "<a>\n    <b>t</b>\n</a>" });
+    expect(formatXml(input, { indent: "tab" })).toEqual({ ok: true, output: "<a>\n\t<b>t</b>\n</a>" });
+  });
 });

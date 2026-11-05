@@ -1,9 +1,8 @@
 import { format, parse, printParseErrorCode, type Edit, type ParseError } from "jsonc-parser";
 import { formatError, positionAt } from "../errors";
-import type { FormatResult } from "../types";
+import type { FormatResult, FormatSettings } from "../types";
 
 // Strict JSON: no comments, no trailing commas, no single quotes, no unquoted keys.
-// The settings argument is ignored, so this fits the Formatter type with one parameter.
 
 /** Deeper than this is refused. Real documents are nowhere near it. */
 export const MAX_JSON_DEPTH = 1000;
@@ -86,7 +85,7 @@ function applyAllEdits(text: string, edits: Edit[]): string {
   return pieces.join("");
 }
 
-export function formatJson(input: string): FormatResult {
+export function formatJson(input: string, settings: FormatSettings = {}): FormatResult {
   // Point at the bracket that crosses the limit, so the editor marks a real line.
   const deep = tooDeepAt(input);
   if (deep !== -1) {
@@ -103,6 +102,7 @@ export function formatJson(input: string): FormatResult {
 
   // format() only moves whitespace, so number literals stay exactly as typed
   // (JSON.parse + JSON.stringify would round 1e400 and long integers).
-  const edits = format(input, undefined, { tabSize: 2, insertSpaces: true, eol: "\n" });
+  const tabs = settings.indent === "tab";
+  const edits = format(input, undefined, { tabSize: tabs ? 1 : Number(settings.indent ?? 2), insertSpaces: !tabs, eol: "\n" });
   return { ok: true, output: applyAllEdits(input, edits) };
 }

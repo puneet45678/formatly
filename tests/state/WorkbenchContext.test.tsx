@@ -22,33 +22,35 @@ describe("WorkbenchContext", () => {
 
   it("starts each format with its default settings", () => {
     const { result } = renderWorkbench();
-    expect(result.current.settings.sql).toEqual({ dialect: "sql" });
-    expect(result.current.settings.json).toEqual({});
+    expect(result.current.settings.sql).toEqual({ dialect: "sql", indent: "2" });
+    expect(result.current.settings.json).toEqual({ indent: "2" });
+    expect(result.current.settings.markdown).toEqual({});
   });
 
   it("changes and remembers a setting", () => {
     const { result } = renderWorkbench();
     act(() => result.current.setSetting("sql", "dialect", "mysql"));
     expect(result.current.settings.sql.dialect).toBe("mysql");
-    expect(localStorage.getItem("formatly:settings:sql")).toBe('{"dialect":"mysql"}');
+    expect(localStorage.getItem("formatly:settings:sql")).toBe('{"dialect":"mysql","indent":"2"}');
   });
 
   it("restores stored settings, ignoring bad ones", () => {
     localStorage.setItem("formatly:settings:sql", '{"dialect":"postgresql"}');
     localStorage.setItem("formatly:settings:json", "{oops");
     const { result, unmount } = renderWorkbench();
-    expect(result.current.settings.sql).toEqual({ dialect: "postgresql" });
-    expect(result.current.settings.json).toEqual({});
+    expect(result.current.settings.sql).toEqual({ dialect: "postgresql", indent: "2" });
+    expect(result.current.settings.json).toEqual({ indent: "2" });
+    expect(result.current.settings.markdown).toEqual({});
     unmount();
 
     localStorage.setItem("formatly:settings:sql", "{oops");
-    expect(renderWorkbench().result.current.settings.sql).toEqual({ dialect: "sql" });
+    expect(renderWorkbench().result.current.settings.sql).toEqual({ dialect: "sql", indent: "2" });
   });
 
   it("ignores an unknown stored dialect", () => {
     localStorage.setItem("formatly:settings:sql", '{"dialect":"oracle"}');
     const { result } = renderWorkbench();
-    expect(result.current.settings.sql).toEqual({ dialect: "sql" });
+    expect(result.current.settings.sql).toEqual({ dialect: "sql", indent: "2" });
   });
 
   it("never writes input text to storage", () => {

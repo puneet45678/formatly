@@ -150,7 +150,7 @@ describe("Workbench", () => {
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "SQL dialect" }), "PostgreSQL");
     typeInput("select 1");
     await within(outputPane()).findByText("Valid");
-    expect(runFormatter).toHaveBeenLastCalledWith("sql", "select 1", { dialect: "postgresql" });
+    expect(runFormatter).toHaveBeenLastCalledWith("sql", "select 1", { dialect: "postgresql", indent: "2" });
   });
 
   it("renders a diagram for mermaid", async () => {

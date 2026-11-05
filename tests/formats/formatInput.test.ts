@@ -72,6 +72,6 @@ describe("formatInput", () => {
     const formatter = vi.fn<Formatter>(() => ({ ok: true, output: "" }));
     stubFormatter("sql", formatter);
     await formatInput("sql", "x", { dialect: "oracle" });
-    expect(formatter).toHaveBeenCalledWith("x", { dialect: "sql" });
+    expect(formatter).toHaveBeenCalledWith("x", { dialect: "sql", indent: "2" });
   });
 });

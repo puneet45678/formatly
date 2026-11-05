@@ -1,4 +1,5 @@
 import type { FormatDefinition } from "../types";
+import { indentSetting } from "./indent";
 
 export const xml = {
   id: "xml",
@@ -8,7 +9,7 @@ export const xml = {
   mime: "application/xml",
   output: "text",
   runsOn: "worker",
-  settings: [],
+  settings: [indentSetting],
   examples: {
     valid: '<a><b x="1">t</b><c/></a>',
     invalid: "<a>\n  <b></a>",

@@ -42,4 +42,7 @@ describe("formatYaml", () => {
       ok: false,
       error: { message: "Map keys must be unique", line: 2 },
     }));
+
+  it("indents with the chosen width", () =>
+    expect(formatYaml("a:\n  b:\n    c: 1\n", { indent: "4" })).toEqual({ ok: true, output: "a:\n    b:\n        c: 1\n" }));
 });

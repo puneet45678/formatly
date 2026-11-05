@@ -1,4 +1,5 @@
 import type { FormatDefinition } from "../types";
+import { indentSetting } from "./indent";
 
 export const sql = {
   id: "sql",
@@ -21,6 +22,7 @@ export const sql = {
         { value: "mysql", label: "MySQL" },
       ],
     },
+    indentSetting,
   ],
   examples: {
     valid: "select id, name from users where active = 1 order by name",
