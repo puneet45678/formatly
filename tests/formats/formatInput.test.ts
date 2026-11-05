@@ -56,6 +56,18 @@ describe("formatInput", () => {
     });
   });
 
+  it("reports a formatter's TooComplexError as a too-complex failure with its message", async () => {
+    const { TooComplexError } = await import("@/formats/errors");
+    stubFormatter("json", () => {
+      throw new TooComplexError("This diagram is too large to draw");
+    });
+    await expect(formatInput("json", "x", {})).resolves.toEqual({
+      kind: "failed",
+      reason: "too-complex",
+      message: "This diagram is too large to draw",
+    });
+  });
+
   it("passes sanitized settings to the formatter", async () => {
     const formatter = vi.fn<Formatter>(() => ({ ok: true, output: "" }));
     stubFormatter("sql", formatter);

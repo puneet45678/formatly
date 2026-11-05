@@ -81,6 +81,10 @@ body {
   .status-error {
     @apply text-err before:bg-err;
   }
+  /* A newer result is on its way; the dot pulses unless the user prefers reduced motion. */
+  .status-pending {
+    @apply text-muted before:bg-muted before:animate-pulse motion-reduce:before:animate-none;
+  }
   /* Formatting stopped (timeout, crash): not the input's fault, so not red. */
   .status-failed {
     @apply text-muted before:bg-muted;

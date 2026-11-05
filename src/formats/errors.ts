@@ -29,3 +29,16 @@ export function positionAt(text: string, offset: number): { line: number; column
 export function formatError(message: string, line: number, column?: number): FormatResult {
   return { ok: false, error: column === undefined ? { message, line } : { message, line, column } };
 }
+
+/**
+ * Thrown by a formatter when the input is valid but too large or complex to
+ * process (a diagram over the renderer's limits, for example). It is not a
+ * syntax error, so it has no position: formatInput reports it as a
+ * "too-complex" failure, and the editor marks no line.
+ */
+export class TooComplexError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TooComplexError";
+  }
+}

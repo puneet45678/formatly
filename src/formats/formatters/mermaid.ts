@@ -1,8 +1,21 @@
-import { formatError } from "../errors";
+import { formatError, TooComplexError } from "../errors";
 import type { FormatResult } from "../types";
 
 // The only formatter that touches `document`: Mermaid measures text in the DOM,
 // so it runs on the main thread (its definition says runsOn: "main").
+
+/**
+ * Mermaid's own limits, set explicitly so we can check them ourselves. Past
+ * MAX_DIAGRAM_CHARS, Mermaid doesn't fail: it quietly draws a placeholder box
+ * ("Maximum text size in diagram exceeded") in place of the user's diagram.
+ * Past MAX_DIAGRAM_EDGES it throws. Both are about size, not syntax, so both
+ * become a TooComplexError rather than an error "at line 1".
+ *
+ * Rendering runs on the page's main thread, so these also bound how long a
+ * render can freeze typing: about 2.3 s at 500 nodes (see docs/adr/0001).
+ */
+export const MAX_DIAGRAM_CHARS = 50_000;
+export const MAX_DIAGRAM_EDGES = 500;
 
 // Loaded lazily and set up once, so pages that never draw a diagram don't download Mermaid.
 let ready: Promise<typeof import("mermaid").default> | undefined;
@@ -12,6 +25,8 @@ function loadMermaid() {
     mermaid.initialize({
       startOnLoad: false, // we call render ourselves; don't scan the page
       securityLevel: "strict", // diagram text is untrusted input: no scripts, no raw HTML
+      maxTextSize: MAX_DIAGRAM_CHARS,
+      maxEdges: MAX_DIAGRAM_EDGES,
       theme: "dark",
       fontFamily: "var(--font-inter), sans-serif",
       themeVariables: {
@@ -32,15 +47,42 @@ function loadMermaid() {
 // Mermaid wants a unique element id per render, or two renders can clash.
 let renderCount = 0;
 
+/**
+ * The SVG goes into the page as HTML (and out through Copy and Download), so it
+ * is sanitized here, once, for every consumer. securityLevel "strict" already
+ * cleans the diagram text inside Mermaid; this is a second, independent control,
+ * so one bug in either does not become script running on our page.
+ *
+ * Flowchart labels are HTML inside <foreignObject>, hence the html profile.
+ */
+async function sanitizeSvg(svg: string): Promise<string> {
+  const { default: DOMPurify } = await import("dompurify");
+  return DOMPurify.sanitize(svg, {
+    USE_PROFILES: { svg: true, svgFilters: true, html: true },
+    ADD_TAGS: ["foreignObject"],
+    // Without this, DOMPurify keeps <foreignObject> but removes the HTML inside
+    // it, which would delete every flowchart label. The HTML is still sanitized.
+    HTML_INTEGRATION_POINTS: { foreignobject: true },
+  });
+}
+
 /** Parses the diagram and draws it as an SVG string. */
 export async function renderMermaid(source: string): Promise<FormatResult> {
+  if (source.length > MAX_DIAGRAM_CHARS) {
+    throw new TooComplexError(
+      `This diagram is too large to draw (${source.length.toLocaleString("en")} characters; the limit is ${MAX_DIAGRAM_CHARS.toLocaleString("en")})`,
+    );
+  }
   const mermaid = await loadMermaid();
   const id = `formatly-mermaid-${++renderCount}`;
   try {
     await mermaid.parse(source); // throws on a syntax error, before anything is drawn
     const { svg } = await mermaid.render(id, source);
-    return { ok: true, output: svg };
+    return { ok: true, output: await sanitizeSvg(svg) };
   } catch (err) {
+    if (isEdgeLimitError(err)) {
+      throw new TooComplexError(`This diagram has more than ${MAX_DIAGRAM_EDGES} connections, the most that can be drawn`);
+    }
     const { line, column } = mermaidErrorPosition(err);
     return formatError(errorMessage(err), line, column);
   } finally {
@@ -48,6 +90,11 @@ export async function renderMermaid(source: string): Promise<FormatResult> {
     document.getElementById(`d${id}`)?.remove();
     document.getElementById(id)?.remove();
   }
+}
+
+/** Mermaid reports too many edges only through its message: "Edge limit exceeded. N edges found, …". */
+function isEdgeLimitError(err: unknown): boolean {
+  return err instanceof Error && err.message.startsWith("Edge limit exceeded");
 }
 
 /**

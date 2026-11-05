@@ -91,6 +91,26 @@ describe("Workbench", () => {
     expect(inputPane().querySelector(".cm-error-line")).toBeNull();
   });
 
+  it("shows Formatting… instead of Valid while a slow result is on its way", async () => {
+    renderWorkbench("json");
+    typeInput('{"a":1}');
+    expect(await within(outputPane()).findByText("Valid")).toBeInTheDocument();
+
+    let finish!: () => void;
+    runFormatter.mockImplementationOnce(
+      (_id, input) => new Promise((resolve) => (finish = () => resolve({ kind: "ok", output: `formatted:${input}` }))),
+    );
+    typeInput('{"a":2}');
+    expect(await within(outputPane()).findByText("Formatting…", {}, { timeout: 2000 })).toBeInTheDocument();
+    expect(within(outputPane()).queryByText("Valid")).toBeNull();
+    // The previous output is still there, marked busy.
+    expect(outputPane().querySelector("[aria-busy=true] .cm-content")).toHaveTextContent('formatted:{"a":1}');
+
+    act(() => finish());
+    expect(await within(outputPane()).findByText("Valid")).toBeInTheDocument();
+    expect(within(outputPane()).queryByText("Formatting…")).toBeNull();
+  });
+
   it("offers Try again after a crash, and shows the result when it works", async () => {
     runFormatter.mockResolvedValueOnce({ kind: "failed", reason: "crashed", message: "The formatter stopped unexpectedly" });
     renderWorkbench("json");

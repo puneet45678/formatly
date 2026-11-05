@@ -5,7 +5,7 @@ import type { FormatId, FormatOutcome, FormatSettings } from "@/formats/types";
 const runFormatter = vi.fn<(id: FormatId, input: string, settings: FormatSettings) => Promise<FormatOutcome>>();
 vi.mock("@/formats/runFormatter", () => ({ runFormatter: (...args: Parameters<typeof runFormatter>) => runFormatter(...args) }));
 
-import { FORMAT_DEBOUNCE_MS, useFormattedOutput } from "@/hooks/useFormattedOutput";
+import { FORMAT_DEBOUNCE_MS, PENDING_AFTER_MS, useFormattedOutput } from "@/hooks/useFormattedOutput";
 
 type Props = { id: FormatId; input: string; settings?: FormatSettings };
 
@@ -197,5 +197,71 @@ describe("useFormattedOutput", () => {
     rerender({ id: "json", input: "xy" });
     await flush();
     expect(result.current).toEqual({ status: "ok", output: "X" });
+  });
+
+  describe("pending", () => {
+    const advance = (ms: number) =>
+      act(async () => {
+        await vi.advanceTimersByTimeAsync(ms);
+      });
+
+    it("never marks a fast result as pending, so typing doesn't flicker", async () => {
+      const { result, rerender } = setup({ id: "json", input: "x" });
+      await flush();
+      rerender({ id: "json", input: "xy" });
+      await advance(FORMAT_DEBOUNCE_MS + PENDING_AFTER_MS * 3);
+      expect(result.current).toEqual({ status: "ok", output: "xy" });
+      expect(result.current.pending).toBeUndefined();
+    });
+
+    it("marks the previous output pending once the next result is late", async () => {
+      runFormatter.mockResolvedValueOnce({ kind: "ok", output: "OLD" });
+      const { result, rerender } = setup({ id: "markdown", input: "a" });
+      await flush();
+
+      const slow = deferred();
+      runFormatter.mockReturnValueOnce(slow.promise);
+      rerender({ id: "markdown", input: "ab" });
+      await advance(FORMAT_DEBOUNCE_MS + PENDING_AFTER_MS - 1);
+      expect(result.current.pending).toBeUndefined();
+      await advance(1);
+      // Still the old output, but no longer presented as current.
+      expect(result.current).toEqual({ status: "ok", output: "OLD", pending: true });
+
+      await act(async () => slow.resolve({ kind: "ok", output: "NEW" }));
+      expect(result.current).toEqual({ status: "ok", output: "NEW" });
+      expect(result.current.pending).toBeUndefined();
+    });
+
+    it("says something is coming on a slow first paste, instead of asking for input", async () => {
+      const slow = deferred();
+      runFormatter.mockReturnValueOnce(slow.promise);
+      const { result } = setup({ id: "markdown", input: "big paste" });
+      await advance(PENDING_AFTER_MS);
+      expect(result.current).toEqual({ status: "empty", pending: true });
+      await act(async () => slow.resolve({ kind: "ok", output: "done" }));
+      expect(result.current).toEqual({ status: "ok", output: "done" });
+    });
+
+    it("does not turn pending after the result has already arrived", async () => {
+      // The result lands before its slow timer would fire; the timer must not mark it pending later.
+      const { result } = setup({ id: "json", input: "x" });
+      await advance(0);
+      expect(result.current).toEqual({ status: "ok", output: "x" });
+      await advance(PENDING_AFTER_MS * 5);
+      expect(result.current.pending).toBeUndefined();
+    });
+
+    it("clears pending when the input is emptied", async () => {
+      const slow = deferred();
+      runFormatter.mockReturnValueOnce(slow.promise);
+      const { result, rerender } = setup({ id: "markdown", input: "big paste" });
+      await advance(PENDING_AFTER_MS);
+      expect(result.current.pending).toBe(true);
+      rerender({ id: "markdown", input: "" });
+      await advance(0);
+      expect(result.current).toEqual({ status: "empty" });
+      expect(result.current.pending).toBeUndefined();
+    });
   });
 });
