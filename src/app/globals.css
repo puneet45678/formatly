@@ -125,6 +125,9 @@ body {
 .md-preview ol {
   list-style: decimal;
 }
+.md-preview li::marker {
+  color: var(--k);
+}
 .md-preview li + li {
   margin-top: 0.25em;
 }
@@ -141,13 +144,14 @@ body {
   color: var(--text);
 }
 .md-preview blockquote {
-  border-left: 2px solid var(--line);
+  border-left: 2px solid var(--k);
   padding-left: 1em;
   color: var(--muted);
 }
 .md-preview :not(pre) > code {
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 0.85em;
+  color: var(--k);
   background: #1c1c1c;
   border: 1px solid var(--line);
   border-radius: 5px;

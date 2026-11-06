@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { act, render } from "@testing-library/react";
+import { act, render, waitFor } from "@testing-library/react";
 import { EditorView } from "@codemirror/view";
 import { CodeEditor } from "@/components/CodeEditor";
 
@@ -46,5 +46,16 @@ describe("CodeEditor", () => {
   it("ignores an error line past the end", () => {
     const { container } = render(<CodeEditor value={"a"} formatId="json" errorLine={9} ariaLabel="JSON input" />);
     expect(container.querySelector(".cm-error-line")).toBeNull();
+  });
+
+  it("colors Markdown headings and bold text but not plain paragraphs", async () => {
+    const { container } = render(<CodeEditor value={"# Title\n\nplain words\n\n**bold**"} formatId="markdown" ariaLabel="Markdown input" />);
+    // The Markdown language loads on demand; once it arrives the spans get highlight classes.
+    await waitFor(() => expect(container.querySelectorAll(".cm-line span[class]").length).toBeGreaterThan(0));
+    const lines = [...container.querySelectorAll(".cm-line")];
+    const styled = (text: string) => lines.find((l) => l.textContent?.includes(text))?.querySelector("span[class]");
+    expect(styled("Title")).not.toBeNull();
+    expect(styled("bold")).not.toBeNull();
+    expect(styled("plain words")).toBeNull();
   });
 });
