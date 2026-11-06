@@ -32,8 +32,39 @@ function loadMermaid() {
 // Mermaid wants a unique element id per render, or two renders can clash.
 let renderCount = 0;
 
+const REMOTE_IMAGE_MESSAGE = "Images in diagrams must be embedded (a data: address). Other addresses would be fetched from another server while you type.";
+
+// "A@{ img: "https://..." }": the image shape sets `new Image().src` while drawing.
+const IMAGE_SHAPE = /@\{[^}]*?\bimg\s*:\s*("[^"]*"|'[^']*'|[^,}\s]+)/g;
+// "<img src=...>" or "<image href=...>" inside a label.
+const IMAGE_TAG = /<\s*(?:img|image)\b[^>]*?\b(?:src|href)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi;
+
+function isEmbedded(value: string): boolean {
+  return /^data:/i.test(value.replace(/^["']/, "").trim());
+}
+
+/**
+ * Finds the first image that is not embedded. Mermaid's strict mode stops scripts but still lets the
+ * browser fetch image addresses, which would tell another server what you are typing.
+ * Anything that is not a data: address counts, so encoded or relative addresses cannot slip through.
+ */
+function findOutsideImage(source: string): { line: number; column: number } | undefined {
+  for (const pattern of [IMAGE_SHAPE, IMAGE_TAG]) {
+    for (const match of source.matchAll(pattern)) {
+      if (isEmbedded(match[1])) continue;
+      const before = source.slice(0, match.index);
+      const line = before.split(/\r\n?|\n/).length;
+      return { line, column: match.index - Math.max(before.lastIndexOf("\n"), before.lastIndexOf("\r")) };
+    }
+  }
+  return undefined;
+}
+
 /** Parses the diagram and draws it as an SVG string. */
 export async function renderMermaid(source: string): Promise<FormatResult> {
+  const outside = findOutsideImage(source);
+  if (outside) return formatError(REMOTE_IMAGE_MESSAGE, outside.line, outside.column);
+
   const mermaid = await loadMermaid();
   const id = `formatly-mermaid-${++renderCount}`;
   try {

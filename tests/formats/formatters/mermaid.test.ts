@@ -188,3 +188,42 @@ describe("mermaidErrorPosition with the original source", () => {
     expect(await renderMermaid("%% note\ngraph TD\n  B-->")).toMatchObject({ ok: false, error: { line: 3 } });
   });
 });
+
+// Drawing a diagram must never contact another server: Mermaid's image shape and <img> tags in labels
+// would make the browser fetch their URLs every time you type. Embedded data: images are fine.
+describe("renderMermaid and remote images", () => {
+  const blocked = [
+    ["an image node", 'flowchart TD\n  A@{ img: "https://tracker.example/p.png", label: "x" }'],
+    ["an image node with single quotes", "flowchart TD\n  A@{ img: 'http://tracker.example/p.png' }"],
+    ["a protocol-relative image node", 'flowchart TD\n  A@{ img: "//tracker.example/p.png" }'],
+    ["an <img> in a label", "flowchart TD\n  A[\"<img src='https://tracker.example/p.png'>\"]"],
+    ["an <img> with an encoded address", "flowchart TD\n  A[\"<img src='&#104;ttps://tracker.example/p.png'>\"]"],
+    ["a relative <img>", 'flowchart TD\n  A["<img src=/p.png>"]'],
+    ["an <image> element", "flowchart TD\n  A[\"<image href='https://tracker.example/p.png'/>\"]"],
+  ];
+
+  it.each(blocked)("refuses %s without parsing or drawing", async (_name, source) => {
+    const { renderMermaid } = await freshModule();
+    const result = await renderMermaid(source);
+    expect(result).toMatchObject({ ok: false, error: { line: 2 } });
+    if (!result.ok) expect(result.error.message).toMatch(/images/i);
+    expect(mock.parse).not.toHaveBeenCalled();
+    expect(mock.render).not.toHaveBeenCalled();
+  });
+
+  it("reports the line of the image, not line 1", async () => {
+    const { renderMermaid } = await freshModule();
+    const result = await renderMermaid('flowchart TD\n  A-->B\n  C@{ img: "https://t.example/p.png" }');
+    expect(result).toMatchObject({ ok: false, error: { line: 3 } });
+  });
+
+  it("allows embedded data: images", async () => {
+    const { renderMermaid } = await freshModule();
+    expect(await renderMermaid('flowchart TD\n  A@{ img: "data:image/png;base64,AAAA" }')).toMatchObject({ ok: true });
+  });
+
+  it("does not mind the word img or a URL in an ordinary label", async () => {
+    const { renderMermaid } = await freshModule();
+    expect(await renderMermaid('flowchart TD\n  A["img: see https://example.com"]')).toMatchObject({ ok: true });
+  });
+});
