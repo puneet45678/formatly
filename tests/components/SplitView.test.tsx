@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { SplitView } from "@/components/SplitView";
 import { DEFAULT_LAYOUT, type SplitLayout } from "@/lib/split";
 
@@ -140,5 +142,85 @@ describe("SplitView collapsed and hidden", () => {
     expect(screen.queryByRole("separator")).toBeNull();
     expect(screen.queryByRole("button", { name: "Expand input" })).toBeNull();
     expect(screen.getByText("left").closest("[hidden]")).not.toBeNull();
+  });
+});
+
+describe("SplitView keeps the page from scrolling", () => {
+  it("handles Home, End and the arrows without scrolling the page", () => {
+    setup();
+    for (const key of ["Home", "End", "ArrowLeft", "ArrowRight", "Enter", " "]) {
+      // fireEvent returns false when the default action was prevented.
+      expect(fireEvent.keyDown(separator(), { key })).toBe(false);
+    }
+  });
+
+  it("leaves other keys alone", () => {
+    setup();
+    expect(fireEvent.keyDown(separator(), { key: "Tab" })).toBe(true);
+  });
+});
+
+describe("SplitView keeps the pane usable when the window is smaller than when it was saved", () => {
+  it("clamps the input's width in CSS so the output keeps at least 240px", () => {
+    const { view } = setup({ inputFraction: 0.9, inputCollapsed: false });
+    const left = view.container.firstElementChild!.firstElementChild!;
+    expect(left.className).toContain("clamp(240px,");
+    expect(left.className).toContain("100%-252px"); // 240px for the output plus the 12px divider
+  });
+});
+
+describe("SplitView keyboard focus", () => {
+  // A parent that owns the layout the way Workbench does.
+  function Controlled({ initial = DEFAULT_LAYOUT }: { initial?: SplitLayout }) {
+    const [layout, setLayout] = useState(initial);
+    return (
+      <>
+        <button type="button">outside</button>
+        <SplitView
+          left={
+            <section aria-label="Input">
+              <button type="button" onClick={() => setLayout({ ...layout, inputCollapsed: true })}>
+                collapse from inside
+              </button>
+            </section>
+          }
+          right={<section aria-label="Output">right</section>}
+          railLabel="Input · JSON"
+          layout={layout}
+          onLayoutChange={setLayout}
+        />
+      </>
+    );
+  }
+
+  it("moves focus to the Expand input button when Enter collapses the divider you were on", () => {
+    render(<Controlled />);
+    separator().focus();
+    fireEvent.keyDown(separator(), { key: "Enter" });
+    expect(screen.getByRole("button", { name: "Expand input" })).toHaveFocus();
+  });
+
+  it("moves focus back to the divider after Expand input", async () => {
+    render(<Controlled initial={{ inputFraction: 0.5, inputCollapsed: true }} />);
+    await userEvent.click(screen.getByRole("button", { name: "Expand input" }));
+    expect(separator()).toHaveFocus();
+  });
+
+  it("moves focus to the rail when a button inside the input collapses it", async () => {
+    render(<Controlled />);
+    await userEvent.click(screen.getByRole("button", { name: "collapse from inside" }));
+    expect(screen.getByRole("button", { name: "Expand input" })).toHaveFocus();
+  });
+
+  it("does not take focus when the layout changes while you are somewhere else", () => {
+    const { rerender } = render(<Controlled />);
+    screen.getByRole("button", { name: "outside" }).focus();
+    rerender(<Controlled initial={{ inputFraction: 0.5, inputCollapsed: true }} />);
+    expect(screen.getByRole("button", { name: "outside" })).toHaveFocus();
+  });
+
+  it("does not take focus on the first render", () => {
+    render(<Controlled initial={{ inputFraction: 0.5, inputCollapsed: true }} />);
+    expect(document.body).toHaveFocus();
   });
 });

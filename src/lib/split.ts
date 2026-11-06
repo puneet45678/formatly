@@ -20,10 +20,11 @@ const COLLAPSE_OVERSHOOT_PX = 60;
 const MIN_FRACTION = 0.1;
 const MAX_FRACTION = 0.9;
 
-/** Keeps both panes at least MIN_PANE_PX wide; an even split if there isn't room for two. */
+/** Keeps both panes at least MIN_PANE_PX wide (and within 10% to 90%); an even split if there isn't room for two. */
 export function clampFraction(fraction: number, paneSpacePx: number): number {
   if (paneSpacePx < MIN_PANE_PX * 2) return 0.5;
-  const min = MIN_PANE_PX / paneSpacePx;
+  // On a very wide window 240px is under 10%; stay inside the range a stored layout may use.
+  const min = Math.max(MIN_FRACTION, MIN_PANE_PX / paneSpacePx);
   return Math.min(1 - min, Math.max(min, fraction));
 }
 

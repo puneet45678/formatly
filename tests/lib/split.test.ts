@@ -16,6 +16,13 @@ describe("clampFraction", () => {
     expect(clampFraction(0.99, 1000)).toBeCloseTo(1 - MIN_PANE_PX / 1000);
   });
   it("leaves a fraction that already fits alone", () => expect(clampFraction(0.4, 1000)).toBe(0.4));
+  it("never goes outside 10% to 90%, even on a huge window where 240px is under 10%", () => {
+    // 3000px of pane space: 240px is only 8%, but sanitizeLayout rejects anything under 10%.
+    expect(clampFraction(0.01, 3000)).toBe(0.1);
+    expect(clampFraction(0.99, 3000)).toBe(0.9);
+    expect(sanitizeLayout({ inputFraction: clampFraction(0.01, 3000) }).inputFraction).toBe(0.1);
+    expect(sanitizeLayout({ inputFraction: clampFraction(0.99, 3000) }).inputFraction).toBe(0.9);
+  });
   it("falls back to an even split when the container is too narrow for two panes", () =>
     expect(clampFraction(0.2, 400)).toBe(0.5));
 });

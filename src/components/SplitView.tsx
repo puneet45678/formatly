@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { PanelLeftOpen } from "lucide-react";
 import {
   DEFAULT_LAYOUT,
@@ -34,8 +34,22 @@ interface SplitViewProps {
 export function SplitView({ left, right, railLabel, layout, onLayoutChange, leftHidden = false }: SplitViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const drag = useRef<{ fraction: number; moved: boolean } | null>(null);
+  const leftPane = useRef<HTMLDivElement>(null);
+  const divider = useRef<HTMLDivElement>(null);
+  const railButton = useRef<HTMLButtonElement>(null);
   const collapsed = layout.inputCollapsed && !leftHidden;
   const showDivider = !layout.inputCollapsed && !leftHidden;
+
+  // Collapsing or expanding removes the control you were using, which would drop keyboard focus to
+  // the top of the page. If focus was lost that way, put it on the control that took its place.
+  const wasCollapsed = useRef(collapsed);
+  useEffect(() => {
+    if (wasCollapsed.current === collapsed) return;
+    wasCollapsed.current = collapsed;
+    const active = document.activeElement;
+    const lost = !active || active === document.body || leftPane.current?.contains(active);
+    if (lost) (collapsed ? railButton.current : divider.current)?.focus();
+  }, [collapsed]);
 
   const paneSpace = () => (container.current?.getBoundingClientRect().width ?? 0) - DIVIDER_PX;
   const setWidth = (fraction: number) => container.current?.style.setProperty("--f", String(fraction));
@@ -76,6 +90,8 @@ export function SplitView({ left, right, railLabel, layout, onLayoutChange, left
   function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     const space = paneSpace();
     const move = (fraction: number) => onLayoutChange({ inputFraction: clampFraction(fraction, space), inputCollapsed: false });
+    // The page scrolls now, so a key this handles must not also scroll it (End would jump to the footer).
+    if (["ArrowLeft", "ArrowRight", "Home", "End", "Enter", " "].includes(e.key)) e.preventDefault();
     switch (e.key) {
       case "ArrowLeft":
         return move(nudge(layout.inputFraction, -1, e.shiftKey));
@@ -87,7 +103,6 @@ export function SplitView({ left, right, railLabel, layout, onLayoutChange, left
         return move(1);
       case "Enter":
       case " ":
-        e.preventDefault();
         return onLayoutChange({ ...layout, inputCollapsed: true });
     }
   }
@@ -100,9 +115,12 @@ export function SplitView({ left, right, railLabel, layout, onLayoutChange, left
     >
       {/* Kept mounted while hidden or collapsed so the editor keeps its text and undo history. */}
       <div
+        ref={leftPane}
         hidden={leftHidden}
         className={cn(
-          "flex min-w-0 flex-col *:flex-1 md:min-h-0 md:*:min-h-0 md:shrink-0 md:grow-0 md:basis-[calc((100%-12px)*var(--f))]",
+          // The input takes its saved share, but never so much that the output drops under 240px
+          // (the window may be smaller than when the share was saved), nor less than 240px itself.
+          "flex min-w-0 flex-col *:flex-1 md:min-h-0 md:*:min-h-0 md:shrink-0 md:grow-0 md:basis-[clamp(240px,calc((100%-12px)*var(--f)),calc(100%-252px))]",
           collapsed && "md:hidden",
         )}
       >
@@ -112,6 +130,7 @@ export function SplitView({ left, right, railLabel, layout, onLayoutChange, left
       {collapsed && (
         <div className="flex w-11 shrink-0 flex-col items-center gap-3 rounded-[10px] border border-line bg-pane py-2.5 backdrop-blur-sm max-md:hidden md:mr-3">
           <button
+            ref={railButton}
             type="button"
             aria-label="Expand input"
             title="Expand input"
@@ -128,6 +147,7 @@ export function SplitView({ left, right, railLabel, layout, onLayoutChange, left
 
       {showDivider && (
         <div
+          ref={divider}
           role="separator"
           aria-orientation="vertical"
           aria-label="Resize input and output"

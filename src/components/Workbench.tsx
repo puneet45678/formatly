@@ -27,21 +27,22 @@ export function Workbench({ formatId }: { formatId: FormatId }) {
   const state = useFormattedOutput(formatId, input, formatSettings);
   const [outputExpanded, setOutputExpanded] = useState(false);
   const router = useRouter();
-  // Set when text for another format is pasted into an empty input; cleared when it is emptied.
-  const [suggestedId, setSuggestedId] = useState<FormatId | null>(null);
-  const suggestedFormat = suggestedId && input !== "" ? getFormat(suggestedId) : null;
+  // Set when text for another format is pasted into an empty input. It only stands while the input
+  // still holds exactly that text, so replacing the text can never move something else by mistake.
+  const [suggestion, setSuggestion] = useState<{ id: FormatId; text: string } | null>(null);
+  const suggestedFormat = suggestion && input === suggestion.text ? getFormat(suggestion.id) : null;
 
   function onPasteIntoEmpty(text: string) {
     const found = detectFormat(text, formatId);
     // Moving the text over would replace whatever is already on that page, so don't offer it then.
-    setSuggestedId(found && inputs[found] === "" ? found : null);
+    setSuggestion(found && inputs[found] === "" ? { id: found, text } : null);
   }
 
   function acceptSuggestion() {
     if (!suggestedFormat) return;
     setInput(suggestedFormat.id, input);
     setInput(formatId, "");
-    setSuggestedId(null);
+    setSuggestion(null);
     router.push(`/${suggestedFormat.id}`);
   }
 
@@ -84,16 +85,16 @@ export function Workbench({ formatId }: { formatId: FormatId }) {
               value={input}
               onChange={(text) => {
                 setInput(formatId, text);
-                if (text === "") setSuggestedId(null);
+                if (text === "") setSuggestion(null);
               }}
               onClear={() => {
                 setInput(formatId, "");
-                setSuggestedId(null);
+                setSuggestion(null);
               }}
               onPasteIntoEmpty={onPasteIntoEmpty}
               suggestion={
                 suggestedFormat
-                  ? { label: suggestedFormat.label, onAccept: acceptSuggestion, onDismiss: () => setSuggestedId(null) }
+                  ? { label: suggestedFormat.label, onAccept: acceptSuggestion, onDismiss: () => setSuggestion(null) }
                   : undefined
               }
               errorLine={state.status === "error" ? state.error.line : undefined}

@@ -260,6 +260,22 @@ describe("Workbench", () => {
       expect(probe.inputs.json).toBe("");
     });
 
+    it("hides the offer once the pasted text has been replaced, so it cannot move the wrong text", async () => {
+      renderWorkbench("json");
+      pasteInput(YAML);
+      expect(screen.getByRole("status", { name: "Format suggestion" })).toBeInTheDocument();
+      typeInput('{"intended":"json"}'); // select all, paste something else
+      expect(screen.queryByRole("status", { name: "Format suggestion" })).toBeNull();
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("puts keyboard focus back in the editor when you dismiss the offer", async () => {
+      renderWorkbench("json");
+      pasteInput(YAML);
+      await userEvent.click(screen.getByRole("button", { name: "Dismiss suggestion" }));
+      expect(inputPane().querySelector(".cm-content")).toHaveFocus();
+    });
+
     it("keeps everything as it is when you dismiss it", async () => {
       renderWorkbench("json");
       pasteInput(YAML);

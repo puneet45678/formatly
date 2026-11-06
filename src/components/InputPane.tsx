@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { PanelLeftClose, X } from "lucide-react";
 import { getFormat } from "@/formats/registry";
 import type { FormatId, FormatSettings } from "@/formats/types";
@@ -38,9 +39,10 @@ export function InputPane({
 }: InputPaneProps) {
   const format = getFormat(formatId);
   const { label } = format;
+  const section = useRef<HTMLElement>(null);
 
   return (
-    <section aria-label="Input" className="pane" hidden={hidden}>
+    <section ref={section} aria-label="Input" className="pane" hidden={hidden}>
       <div className="pane-header">
         <b className="font-medium text-text">Input · {label}</b>
         <div className="flex items-center gap-2">
@@ -91,7 +93,11 @@ export function InputPane({
           </button>
           <button
             type="button"
-            onClick={suggestion.onDismiss}
+            onClick={() => {
+              suggestion.onDismiss();
+              // The button is about to disappear; keep keyboard focus in the editor.
+              section.current?.querySelector<HTMLElement>(".cm-content")?.focus();
+            }}
             aria-label="Dismiss suggestion"
             title="Dismiss"
             className="ml-auto rounded p-0.5 text-dim hover:text-text"
