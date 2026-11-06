@@ -3,9 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CodeMirror, { type Extension } from "@uiw/react-codemirror";
 import { Decoration, EditorView, type ViewUpdate } from "@codemirror/view";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
-import { tags as t } from "@lezer/highlight";
+import { syntaxHighlighting } from "@codemirror/language";
 import type { FormatId } from "@/formats/types";
+import { editorTheme, highlightStyle } from "./editor-theme";
 import { FORMAT_UI } from "./format-ui";
 
 interface CodeEditorProps {
@@ -17,30 +17,9 @@ interface CodeEditorProps {
   errorLine?: number;
   ariaLabel: string;
   placeholder?: string;
+  /** Called with the whole text when something is pasted into an editor that was empty. */
+  onPasteIntoEmpty?: (text: string) => void;
 }
-
-// Colors from the design tokens in globals.css.
-const highlight = HighlightStyle.define([
-  { tag: [t.propertyName, t.keyword, t.tagName, t.heading], color: "#7dd3fc" },
-  { tag: [t.string, t.special(t.string)], color: "#a7f3d0" },
-  { tag: [t.number, t.bool, t.null, t.atom, t.attributeName], color: "#fcd34d" },
-  { tag: [t.punctuation, t.bracket, t.separator, t.comment], color: "#6b7280" },
-]);
-
-const theme = EditorView.theme(
-  {
-    "&": { height: "100%", backgroundColor: "transparent", color: "#cfcfcf", fontSize: "12px" },
-    "&.cm-focused": { outline: "1px solid #3f3f3f", outlineOffset: "-1px" },
-    ".cm-scroller": { fontFamily: "var(--font-jetbrains-mono), monospace", lineHeight: "1.65" },
-    ".cm-content": { padding: "12px 0", caretColor: "#ededed" },
-    ".cm-gutters": { backgroundColor: "transparent", border: "none", color: "#3f3f3f" },
-    ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "transparent" },
-    ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": { backgroundColor: "#264f78 !important" },
-    ".cm-placeholder": { color: "#5c5c5c" },
-    ".cm-error-line": { backgroundColor: "rgba(248,113,113,.12)" },
-  },
-  { dark: true },
-);
 
 // Kept at module level: the CodeMirror wrapper rebuilds the whole editor
 // setup whenever this object (or onChange) changes identity.
@@ -92,12 +71,22 @@ function useLanguage(formatId: FormatId): Extension {
   return loaded?.formatId === formatId ? loaded.language : PLAIN_TEXT;
 }
 
-export function CodeEditor({ value, onChange, formatId, readOnly, errorLine, ariaLabel, placeholder }: CodeEditorProps) {
+export function CodeEditor({
+  value,
+  onChange,
+  formatId,
+  readOnly,
+  errorLine,
+  ariaLabel,
+  placeholder,
+  onPasteIntoEmpty,
+}: CodeEditorProps) {
   const language = useLanguage(formatId);
+
   const extensions = useMemo(
     () => [
       language,
-      syntaxHighlighting(highlight),
+      syntaxHighlighting(highlightStyle),
       EditorView.contentAttributes.of({ "aria-label": ariaLabel }),
       ...(errorLine ? [errorLineExtension(errorLine)] : []),
     ],
@@ -110,6 +99,17 @@ export function CodeEditor({ value, onChange, formatId, readOnly, errorLine, ari
   useEffect(() => {
     latestOnChange.current = onChange;
   });
+  const latestPaste = useRef(onPasteIntoEmpty);
+  useEffect(() => {
+    latestPaste.current = onPasteIntoEmpty;
+  });
+  // Pasting into an empty editor is how people bring in text from elsewhere; the page may want to know.
+  const stableOnUpdate = useCallback((update: ViewUpdate) => {
+    if (!update.docChanged || update.startState.doc.length !== 0) return;
+    if (update.transactions.some((tr) => tr.isUserEvent("input.paste"))) {
+      latestPaste.current?.(update.state.doc.toString());
+    }
+  }, []);
   const stableOnChange = useCallback(
     (text: string, update: ViewUpdate) => latestOnChange.current?.(text, update),
     [],
@@ -119,8 +119,9 @@ export function CodeEditor({ value, onChange, formatId, readOnly, errorLine, ari
     <CodeMirror
       value={value}
       onChange={onChange ? stableOnChange : undefined}
+      onUpdate={onPasteIntoEmpty ? stableOnUpdate : undefined}
       extensions={extensions}
-      theme={theme}
+      theme={editorTheme}
       readOnly={readOnly}
       editable={!readOnly}
       placeholder={placeholder}

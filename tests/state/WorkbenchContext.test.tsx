@@ -107,4 +107,31 @@ describe("WorkbenchContext", () => {
     rememberFormat("xml");
     expect(localStorage.getItem("formatly:lastFormat")).toBe("xml");
   });
+
+  it("starts with an even split and the input open", () => {
+    const { result } = renderWorkbench();
+    expect(result.current.layout).toEqual({ inputFraction: 0.5, inputCollapsed: false });
+  });
+
+  it("changes the layout and remembers it", () => {
+    const { result } = renderWorkbench();
+    act(() => result.current.setLayout({ inputFraction: 0.3, inputCollapsed: true }));
+    expect(result.current.layout).toEqual({ inputFraction: 0.3, inputCollapsed: true });
+    expect(JSON.parse(localStorage.getItem("formatly:layout")!)).toEqual({ inputFraction: 0.3, inputCollapsed: true });
+  });
+
+  it("restores a stored layout", () => {
+    localStorage.setItem("formatly:layout", '{"inputFraction":0.35,"inputCollapsed":true}');
+    const { result } = renderWorkbench();
+    expect(result.current.layout).toEqual({ inputFraction: 0.35, inputCollapsed: true });
+  });
+
+  it("ignores a corrupt stored layout", () => {
+    for (const bad of ["{oops", '{"inputFraction":9}', "null", '"x"', '{"inputFraction":"0.3"}']) {
+      localStorage.setItem("formatly:layout", bad);
+      const { result, unmount } = renderWorkbench();
+      expect(result.current.layout).toEqual({ inputFraction: 0.5, inputCollapsed: false });
+      unmount();
+    }
+  });
 });

@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} h-full antialiased`}>
-      <body className="flex h-dvh flex-col font-sans">
+      <body className="flex min-h-dvh flex-col font-sans">
         <KineticGrid />
         <TopBar />
         <WorkbenchProvider>{children}</WorkbenchProvider>

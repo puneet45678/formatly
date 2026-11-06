@@ -12,6 +12,8 @@ interface FormatRailProps {
   /** Desktop only: closed = symbols only; open = symbols with names. */
   collapsed?: boolean;
   onToggle?: () => void;
+  /** Renders nothing (the expanded output uses the full width). */
+  hidden?: boolean;
 }
 
 /**
@@ -20,7 +22,7 @@ interface FormatRailProps {
  * symbols (hover or focus shows a name pill); open it widens to show names.
  * Phones: a floating bar at the bottom of the screen, symbols only.
  */
-export function FormatRail({ activeId, collapsed = true, onToggle }: FormatRailProps) {
+export function FormatRail({ activeId, collapsed = true, onToggle, hidden = false }: FormatRailProps) {
   const activeLink = useRef<HTMLAnchorElement>(null);
 
   // If the phone bar ever needs to scroll sideways, keep the selected format on screen.
@@ -29,6 +31,8 @@ export function FormatRail({ activeId, collapsed = true, onToggle }: FormatRailP
   }, [activeId]);
 
   const ToggleIcon = collapsed ? PanelLeftOpen : PanelLeftClose;
+
+  if (hidden) return null;
 
   return (
     <nav
