@@ -38,6 +38,14 @@ describe("format registry", () => {
     expect(FORMATS.map((f) => f.id).filter((id) => shipped.includes(id))).toEqual(shipped);
   });
 
+  it("keeps each valid example short, because it is shown as the input's placeholder", () => {
+    for (const f of FORMATS) {
+      expect(f.examples.valid.trim()).not.toBe("");
+      expect(f.examples.valid.split("\n").length).toBeLessThanOrEqual(8);
+      expect(f.examples.valid.length).toBeLessThanOrEqual(200);
+    }
+  });
+
   it("isFormatId accepts known and rejects others", () => {
     expect(isFormatId("yaml")).toBe(true);
     for (const v of ["not-a-format", "", null, undefined, 42, "JSON"]) expect(isFormatId(v)).toBe(false);

@@ -31,7 +31,8 @@ export const editorTheme = EditorView.theme(
     ".cm-gutters": { backgroundColor: "transparent", border: "none", color: "#3f3f3f" },
     ".cm-activeLine, .cm-activeLineGutter": { backgroundColor: "transparent" },
     ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": { backgroundColor: "#264f78 !important" },
-    ".cm-placeholder": { color: "#5c5c5c" },
+    // The input shows an example as its placeholder, which can span several lines.
+    ".cm-placeholder": { color: "#5c5c5c", whiteSpace: "pre-wrap" },
     ".cm-error-line": { backgroundColor: "rgba(248,113,113,.12)" },
   },
   { dark: true },

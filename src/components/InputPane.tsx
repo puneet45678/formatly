@@ -113,7 +113,8 @@ export function InputPane({
         formatId={formatId}
         errorLine={errorLine}
         ariaLabel={`${label} input`}
-        placeholder={`Paste ${label} here`}
+        // A faint example of what to paste, in the empty editor (gone as soon as there is text).
+        placeholder={format.examples.valid}
       />
     </section>
   );
