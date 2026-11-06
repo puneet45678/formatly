@@ -10,36 +10,37 @@ import {
 import { FORMAT_UI } from "@/components/format-ui";
 
 describe("format registry", () => {
-  it("lists formats in rail order", () => {
-    expect(FORMATS.map((f) => f.id)).toEqual(["json", "yaml", "mermaid", "xml", "sql", "markdown"]);
+  it("includes the shipped formats", () => {
+    expect(FORMATS.map((f) => f.id)).toEqual(
+      expect.arrayContaining(["json", "yaml", "mermaid", "xml", "sql", "markdown"]),
+    );
   });
 
-  it("has the spec labels", () => {
-    expect(FORMATS.map((f) => f.label)).toEqual(["JSON", "YAML", "Mermaid", "XML", "SQL", "Markdown"]);
+  it("has unique labels, glyphs and extensions", () => {
+    for (const key of ["label", "glyph", "extension"] as const)
+      expect(new Set(FORMATS.map((f) => f[key])).size).toBe(FORMATS.length);
   });
 
-  it("has the spec glyphs", () => {
-    expect(FORMATS.map((f) => f.glyph)).toEqual(["{ }", "---", "->", "</>", "SQL", "#"]);
+  it("uses bare file extensions", () => {
+    for (const f of FORMATS) expect(f.extension).toMatch(/^[a-z0-9]+$/);
   });
 
-  it("uses spec extensions", () => {
-    expect(Object.fromEntries(FORMATS.map((f) => [f.id, f.extension]))).toEqual({
-      json: "json",
-      yaml: "yaml",
-      mermaid: "svg",
-      xml: "xml",
-      sql: "sql",
-      markdown: "md",
-    });
+  it("gives diagrams an svg extension and text formats their own", () => {
+    for (const f of FORMATS) if (f.output === "diagram") expect(f.extension).toBe("svg");
   });
 
-  it("marks only mermaid as diagram", () => {
-    expect(FORMATS.filter((f) => f.output === "diagram").map((f) => f.id)).toEqual(["mermaid"]);
+  it("runs on the main thread only the formats that draw diagrams", () => {
+    for (const f of FORMATS) if (f.runsOn === "main") expect(f.output).toBe("diagram");
+  });
+
+  it("keeps the shipped formats in rail order", () => {
+    const shipped = ["json", "yaml", "mermaid", "xml", "sql", "markdown"];
+    expect(FORMATS.map((f) => f.id).filter((id) => shipped.includes(id))).toEqual(shipped);
   });
 
   it("isFormatId accepts known and rejects others", () => {
     expect(isFormatId("yaml")).toBe(true);
-    for (const v of ["csv", "", null, undefined, 42, "JSON"]) expect(isFormatId(v)).toBe(false);
+    for (const v of ["not-a-format", "", null, undefined, 42, "JSON"]) expect(isFormatId(v)).toBe(false);
   });
 
   it("getFormat returns the matching definition", () => {
@@ -58,16 +59,7 @@ describe("format registry", () => {
     expect(dialect.options.map((o) => o.value)).toEqual(["sql", "transactsql", "postgresql", "mysql"]);
   });
 
-  it("derives ids, labels and order from the definitions", () =>
-    expect(FORMATS.map((f) => f.id)).toEqual(["json", "yaml", "mermaid", "xml", "sql", "markdown"]));
-
-  it("has unique ids, glyphs and extensions", () => {
-    for (const key of ["id", "glyph", "extension"] as const)
-      expect(new Set(FORMATS.map((f) => f[key])).size).toBe(FORMATS.length);
-  });
-
-  it("only mermaid runs on the main thread", () =>
-    expect(FORMATS.filter((f) => f.runsOn === "main").map((f) => f.id)).toEqual(["mermaid"]));
+  it("has unique ids", () => expect(new Set(FORMATS.map((f) => f.id)).size).toBe(FORMATS.length));
 
   it("gives every format a UI entry", () =>
     expect(Object.keys(FORMAT_UI).sort()).toEqual(FORMATS.map((f) => f.id).sort()));

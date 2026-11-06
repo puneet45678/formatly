@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { act, fireEvent, renderHook } from "@testing-library/react";
+import { FORMATS } from "@/formats/registry";
 import { WorkbenchProvider, rememberFormat, useWorkbench } from "@/state/WorkbenchContext";
 
 function renderWorkbench() {
@@ -9,7 +10,7 @@ function renderWorkbench() {
 describe("WorkbenchContext", () => {
   it("starts with empty inputs", () => {
     const { result } = renderWorkbench();
-    expect(result.current.inputs).toEqual({ json: "", yaml: "", mermaid: "", xml: "", sql: "", markdown: "" });
+    expect(result.current.inputs).toEqual(Object.fromEntries(FORMATS.map((f) => [f.id, ""])));
   });
 
   it("keeps each format input separate", () => {

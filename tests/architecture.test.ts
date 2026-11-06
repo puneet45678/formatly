@@ -2,6 +2,7 @@
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { FORMATS } from "@/formats/registry";
 
 const SRC = path.resolve(__dirname, "../src");
 
@@ -30,9 +31,8 @@ describe("architecture", () => {
 
     const offenders = uiFiles.filter((file) => {
       const source = readFileSync(path.join(SRC, file), "utf8");
-      return (
-        /(===|!==)\s*["'](json|yaml|mermaid|xml|sql|markdown)["']/.test(source) || /\.id\s*===\s*["']/.test(source)
-      );
+      const ids = FORMATS.map((f) => f.id).join("|");
+      return new RegExp(`(===|!==)\\s*["'](${ids})["']`).test(source) || /\.id\s*===\s*["']/.test(source);
     });
     expect(offenders).toEqual([]);
   });
@@ -44,6 +44,25 @@ describe("architecture", () => {
         .filter((specifier) => forbidden.test(specifier))
         .map((specifier) => `${file} imports ${specifier}`),
     );
+    expect(offenders).toEqual([]);
+  });
+
+  it("adding a format does not require editing other tests", () => {
+    // Only the registry test may list the formats; a test that does breaks
+    // whenever a format is added. Three or more format ids in one array is a list.
+    const TESTS = path.resolve(__dirname);
+    const walk = (dir: string): string[] =>
+      readdirSync(dir).flatMap((name) => {
+        const full = path.join(dir, name);
+        return statSync(full).isDirectory() ? walk(full) : /\.tsx?$/.test(name) ? [full] : [];
+      });
+    const ids = FORMATS.map((f) => `["']${f.id}["']`).join("|");
+    const list = new RegExp(`(?:${ids})\\s*,\\s*(?:${ids})\\s*,\\s*(?:${ids})`);
+    const allowed = new Set(["architecture.test.ts", "registry.test.ts"]);
+    const offenders = walk(TESTS)
+      .filter((file) => !allowed.has(path.basename(file)))
+      .filter((file) => list.test(readFileSync(file, "utf8")))
+      .map((file) => path.relative(TESTS, file));
     expect(offenders).toEqual([]);
   });
 });
