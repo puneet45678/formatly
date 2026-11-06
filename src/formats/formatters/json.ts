@@ -56,10 +56,14 @@ function describeError(text: string, errors: ParseError[]): string {
   const first = errors[0];
   const code = printParseErrorCode(first.error);
 
-  if (code === "ValueExpected" && (text[first.offset] === "]" || text[first.offset] === "}")) {
-    // "[1,2,]": the parser wants a value after the comma; the comma is the real problem.
-    const before = text.slice(0, first.offset).trimEnd();
-    if (before.endsWith(",")) return TRAILING_COMMA;
+  // "[1,2,]" and '{"a":1,}': the parser wants a value (or a key) after the comma,
+  // but the comma is the real problem.
+  const closer = text[first.offset];
+  if (
+    (code === "ValueExpected" && (closer === "]" || closer === "}")) ||
+    (code === "PropertyNameExpected" && closer === "}")
+  ) {
+    if (text.slice(0, first.offset).trimEnd().endsWith(",")) return TRAILING_COMMA;
   }
   // 'a' and a (bare word) both come back as InvalidSymbol then PropertyNameExpected.
   if (code === "InvalidSymbol" && errors[1] && printParseErrorCode(errors[1].error) === "PropertyNameExpected") {
