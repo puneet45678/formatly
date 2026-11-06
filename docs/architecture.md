@@ -71,7 +71,14 @@ Nothing else changes. The route (`/toml`), capsule button, tagline word, file ex
 **Existing tests.** No test other than `tests/formats/registry.test.ts` spells out the list of formats; they read it from `FORMATS`, and `tests/architecture.test.ts` catches the common way of breaking that (three or more format ids listed together); a count such as `toHaveLength(6)` it cannot see, so derive counts from `FORMATS` too. So adding a format changes no existing test (checked by adding a throwaway CSV format: exactly the four files above changed and the suite stayed green).
 
 - **A per-format setting** (like the SQL dialect) is one entry in the definition's `settings` array. The dropdown, the per-format storage (`formatly:settings:<id>`), cleaning up bad stored values and passing the value to the formatter all happen automatically.
+- **Recognising pasted text** is one optional field: `detect(input): number` in the definition (0 = no, 1 = certain). When text is pasted into an empty input, `detectFormat()` (`src/formats/detect.ts`) compares every format's score and, if another format is clearly the better fit, the input shows "This looks like YAML. Switch to YAML". A format without `detect` is simply never suggested. Rules for a detector: cheap (it runs on the page, on a paste), no library imports (that would pull the library in eagerly), no pattern that can backtrack on a long line (`tests/formats/detect.test.ts` runs every detector over pathological pastes, and checks each format's own example is never mistaken for another).
 - **A preview** (like Markdown's rendered view) is one line in `format-ui.ts`: `preview: () => import("./TomlPreview").then((m) => m.TomlPreview)`. The output pane then shows Preview / Source buttons and loads the component only when it's first shown.
+
+## The page around the tool
+
+- **Layout.** `Workbench` is one format's page: the tool (format capsule, intro, panes) fills the first screen on desktop and the About text sits below it, so the page scrolls and the tool does not. While the output is expanded the capsule, intro and About text are hidden and the output gets the full width.
+- **Split view.** `SplitView` puts a draggable divider between the input and output (desktop only; on phones they stack). Dragging writes a CSS variable directly and commits once on release; arrow keys, Home/End, Enter (collapse) and double-click (reset) work on the divider. The input can collapse to a rail. The maths lives in `src/lib/split.ts`; the layout is stored under `formatly:layout` and sanitized on read.
+- **Site text.** The intro above the panes and the About text below are the same on every format and live in `src/content/site.ts`. They state only what the product does (see `tests/content/site.test.ts` and the no-network check in `tests/architecture.test.ts`). Adding a format changes none of it: the format list in the copy is read from `FORMATS`.
 
 ## Loading
 
