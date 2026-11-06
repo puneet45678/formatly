@@ -48,12 +48,12 @@ const urlTransform: UrlTransform = (url, key) =>
   key === "src" && isInlineImage(url) ? url : defaultUrlTransform(url);
 
 /** Renders Markdown for reading. Raw HTML in the Markdown is not rendered. */
-export function MarkdownPreview({ markdown }: { markdown: string }) {
+export function MarkdownPreview({ source }: { source: string }) {
   return (
     <div className="min-h-0 flex-1 overflow-auto">
       <article className="md-preview">
         <Markdown remarkPlugins={[remarkGfm]} skipHtml components={components} urlTransform={urlTransform}>
-          {markdown}
+          {source}
         </Markdown>
       </article>
     </div>

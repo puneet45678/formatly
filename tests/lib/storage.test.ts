@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readStored, writeStored, STORAGE_KEYS } from "@/lib/storage";
+import { readStored, writeStored, settingsKey, STORAGE_KEYS } from "@/lib/storage";
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -27,8 +27,11 @@ describe("storage", () => {
   it("uses the spec keys", () => {
     expect(STORAGE_KEYS).toEqual({
       lastFormat: "formatly:lastFormat",
-      sqlDialect: "formatly:sqlDialect",
       railCollapsed: "formatly:railCollapsed",
     });
+  });
+
+  it("keeps each format's settings under its own key", () => {
+    expect(settingsKey("sql")).toBe("formatly:settings:sql");
   });
 });

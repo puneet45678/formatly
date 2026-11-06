@@ -2,11 +2,17 @@
 // blocked site data), and the app must keep working when it does.
 // Only preferences are stored here, never what the user pastes.
 
+import type { FormatId } from "@/formats/types";
+
 export const STORAGE_KEYS = {
   lastFormat: "formatly:lastFormat",
-  sqlDialect: "formatly:sqlDialect",
   railCollapsed: "formatly:railCollapsed",
 } as const;
+
+/** Where one format's settings live, stored as JSON, e.g. `{"dialect":"mysql"}`. */
+export function settingsKey(id: FormatId): string {
+  return `formatly:settings:${id}`;
+}
 
 export function readStored(key: string): string | null {
   try {

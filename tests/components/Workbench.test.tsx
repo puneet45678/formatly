@@ -2,10 +2,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditorView } from "@codemirror/view";
-import type { FormatId, FormatOptions, FormatResult } from "@/formats/types";
+import type { FormatId, FormatResult, FormatSettings } from "@/formats/types";
 import { WorkbenchProvider } from "@/state/WorkbenchContext";
 
-const runFormatter = vi.fn<(id: FormatId, input: string, options?: FormatOptions) => Promise<FormatResult>>();
+const runFormatter = vi.fn<(id: FormatId, input: string, settings: FormatSettings) => Promise<FormatResult>>();
 vi.mock("@/formats/runFormatter", () => ({ runFormatter: (...args: Parameters<typeof runFormatter>) => runFormatter(...args) }));
 
 import { Workbench } from "@/components/Workbench";
@@ -105,7 +105,7 @@ describe("Workbench", () => {
     await userEvent.selectOptions(screen.getByRole("combobox", { name: "SQL dialect" }), "PostgreSQL");
     typeInput("select 1");
     await within(outputPane()).findByText("Valid");
-    expect(runFormatter).toHaveBeenLastCalledWith("sql", "select 1", { sqlDialect: "postgresql" });
+    expect(runFormatter).toHaveBeenLastCalledWith("sql", "select 1", { dialect: "postgresql" });
   });
 
   it("renders a diagram for mermaid", async () => {

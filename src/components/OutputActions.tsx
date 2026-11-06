@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { FormatMeta } from "@/formats/types";
+import type { RegisteredFormat } from "@/formats/registry";
 import type { OutputState } from "@/hooks/useFormattedOutput";
 import { useCopyShortcut } from "@/hooks/useCopyShortcut";
 import { copyText } from "@/lib/clipboard";
@@ -23,9 +23,9 @@ function useFeedbackLabel<T extends string>(initial: T) {
   return [label, setLabel] as const;
 }
 
-export function OutputActions({ format, state }: { format: FormatMeta; state: OutputState }) {
+export function OutputActions({ format, state }: { format: RegisteredFormat; state: OutputState }) {
   const output = state.status === "ok" ? state.output : null;
-  const isDiagram = format.outputKind === "diagram";
+  const isDiagram = format.output === "diagram";
   const [copyLabel, setCopyLabel] = useFeedbackLabel<CopyLabel>("Copy");
   const [pngLabel, setPngLabel] = useFeedbackLabel<PngLabel>("Download PNG");
 

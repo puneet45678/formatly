@@ -1,16 +1,18 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, renderHook } from "@testing-library/react";
-import type { FormatId, FormatOptions, FormatResult } from "@/formats/types";
+import type { FormatId, FormatResult, FormatSettings } from "@/formats/types";
 
-const runFormatter = vi.fn<(id: FormatId, input: string, options?: FormatOptions) => Promise<FormatResult>>();
+const runFormatter = vi.fn<(id: FormatId, input: string, settings: FormatSettings) => Promise<FormatResult>>();
 vi.mock("@/formats/runFormatter", () => ({ runFormatter: (...args: Parameters<typeof runFormatter>) => runFormatter(...args) }));
 
 import { FORMAT_DEBOUNCE_MS, useFormattedOutput } from "@/hooks/useFormattedOutput";
 
-type Props = { id: FormatId; input: string; options?: FormatOptions };
+type Props = { id: FormatId; input: string; settings?: FormatSettings };
+
+const NO_SETTINGS: FormatSettings = {};
 
 function setup(initial: Props) {
-  return renderHook((p: Props) => useFormattedOutput(p.id, p.input, p.options), { initialProps: initial });
+  return renderHook((p: Props) => useFormattedOutput(p.id, p.input, p.settings ?? NO_SETTINGS), { initialProps: initial });
 }
 
 /** Let the debounce elapse and pending promises settle. */
@@ -56,7 +58,7 @@ describe("useFormattedOutput", () => {
     }
     await flush();
     expect(runFormatter).toHaveBeenCalledTimes(1);
-    expect(runFormatter).toHaveBeenCalledWith("json", "abc", undefined);
+    expect(runFormatter).toHaveBeenCalledWith("json", "abc", {});
   });
 
   it("shows ok output", async () => {
@@ -137,10 +139,22 @@ describe("useFormattedOutput", () => {
     expect(result.current).toEqual({ status: "empty" });
   });
 
-  it("passes sqlDialect through", async () => {
-    setup({ id: "sql", input: "select 1", options: { sqlDialect: "mysql" } });
+  it("passes settings through", async () => {
+    setup({ id: "sql", input: "select 1", settings: { dialect: "mysql" } });
     await flush();
-    expect(runFormatter).toHaveBeenCalledWith("sql", "select 1", { sqlDialect: "mysql" });
+    expect(runFormatter).toHaveBeenCalledWith("sql", "select 1", { dialect: "mysql" });
+  });
+
+  it("formats again when a setting changes, but not for an equal settings object", async () => {
+    const { rerender } = setup({ id: "sql", input: "select 1", settings: { dialect: "sql" } });
+    await flush();
+    rerender({ id: "sql", input: "select 1", settings: { dialect: "sql" } });
+    await flush();
+    expect(runFormatter).toHaveBeenCalledTimes(1);
+    rerender({ id: "sql", input: "select 1", settings: { dialect: "mysql" } });
+    await flush();
+    expect(runFormatter).toHaveBeenCalledTimes(2);
+    expect(runFormatter).toHaveBeenLastCalledWith("sql", "select 1", { dialect: "mysql" });
   });
 
   it("turns a rejected formatter into an error at line 1", async () => {

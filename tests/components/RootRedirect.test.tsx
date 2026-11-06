@@ -14,7 +14,7 @@ describe("pickStartFormat", () => {
   });
 
   it("ignores unknown values", () => {
-    expect(pickStartFormat("csv")).toBe("json");
+    expect(pickStartFormat("not-a-format")).toBe("json");
     expect(pickStartFormat(null)).toBe("json");
   });
 });
