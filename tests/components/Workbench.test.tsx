@@ -3,6 +3,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import userEvent from "@testing-library/user-event";
 import { EditorView } from "@codemirror/view";
 import type { FormatId, FormatResult, FormatSettings } from "@/formats/types";
+import { FORMATS } from "@/formats/registry";
 import { WorkbenchProvider } from "@/state/WorkbenchContext";
 
 const runFormatter = vi.fn<(id: FormatId, input: string, settings: FormatSettings) => Promise<FormatResult>>();
@@ -178,6 +179,37 @@ describe("Workbench", () => {
     expect(screen.queryByRole("button", { name: "Expand input" })).toBeNull(); // no rail while expanded
     await userEvent.click(within(outputPane()).getByRole("button", { name: "Exit expanded output" }));
     expect(screen.getByRole("button", { name: "Expand input" })).toBeInTheDocument();
+  });
+
+  it("shows the intro above the panes while the input is empty and shrinks it once there is input", async () => {
+    renderWorkbench("yaml");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Paste anything. Get it formatted.");
+    typeInput("a: 1");
+    expect(await screen.findByText("Paste. Format. Done.")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+    act(() => {
+      const view = EditorView.findFromDOM(inputPane().querySelector(".cm-content") as HTMLElement)!;
+      view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: "" } });
+    });
+    expect(await screen.findByRole("heading", { level: 1 })).toBeInTheDocument(); // comes back when empty
+  });
+
+  it("shows the same About text below the tool on every format", () => {
+    for (const { id } of FORMATS) {
+      const { unmount } = renderWorkbench(id);
+      expect(screen.getByRole("region", { name: /private formatter/i })).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("hides the intro and the About text while the output is expanded", async () => {
+    renderWorkbench("json");
+    await userEvent.click(within(outputPane()).getByRole("button", { name: "Expand output" }));
+    expect(screen.queryByRole("heading", { level: 1 })).toBeNull();
+    expect(screen.queryByRole("region", { name: /private formatter/i })).toBeNull();
+    await userEvent.click(within(outputPane()).getByRole("button", { name: "Exit expanded output" }));
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /private formatter/i })).toBeInTheDocument();
   });
 
   it("remembers the format", () => {

@@ -102,7 +102,7 @@ export function SplitView({ left, right, railLabel, layout, onLayoutChange, left
       <div
         hidden={leftHidden}
         className={cn(
-          "flex min-h-0 min-w-0 flex-col *:min-h-0 *:flex-1 md:shrink-0 md:grow-0 md:basis-[calc((100%-12px)*var(--f))]",
+          "flex min-w-0 flex-col *:flex-1 md:min-h-0 md:*:min-h-0 md:shrink-0 md:grow-0 md:basis-[calc((100%-12px)*var(--f))]",
           collapsed && "md:hidden",
         )}
       >
@@ -148,7 +148,7 @@ export function SplitView({ left, right, railLabel, layout, onLayoutChange, left
         </div>
       )}
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col *:min-h-0 *:flex-1">{right}</div>
+      <div className="flex min-w-0 flex-1 flex-col *:flex-1 md:min-h-0 md:*:min-h-0">{right}</div>
     </div>
   );
 }

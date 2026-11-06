@@ -36,6 +36,8 @@
 
 html {
   color-scheme: dark;
+  /* Height of the top bar, so the tool can fill exactly the rest of the first screen. */
+  --topbar-h: 57px;
 }
 
 body {

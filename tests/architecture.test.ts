@@ -65,4 +65,16 @@ describe("architecture", () => {
       .map((file) => path.relative(TESTS, file));
     expect(offenders).toEqual([]);
   });
+
+  it("the app's own code never sends anything anywhere", () => {
+    // The About text promises that nothing pasted is uploaded. The page text says it, this test holds it:
+    // no source file uses an API that sends data to a server.
+    const network = /\b(fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon)\b\s*[(.]|new\s+(XMLHttpRequest|WebSocket|EventSource)\b/;
+    const files = sourceFiles(".");
+    expect(files.length).toBeGreaterThan(20); // the scan really found the source
+    const offenders = files
+      .filter((file) => network.test(readFileSync(path.join(SRC, file), "utf8").replace(/\/\/.*|\/\*[\s\S]*?\*\//g, "")))
+      .map((file) => file);
+    expect(offenders).toEqual([]);
+  });
 });
