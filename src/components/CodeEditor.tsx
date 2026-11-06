@@ -17,6 +17,8 @@ interface CodeEditorProps {
   errorLine?: number;
   ariaLabel: string;
   placeholder?: string;
+  /** Called with the whole text when something is pasted into an editor that was empty. */
+  onPasteIntoEmpty?: (text: string) => void;
 }
 
 // Kept at module level: the CodeMirror wrapper rebuilds the whole editor
@@ -69,8 +71,18 @@ function useLanguage(formatId: FormatId): Extension {
   return loaded?.formatId === formatId ? loaded.language : PLAIN_TEXT;
 }
 
-export function CodeEditor({ value, onChange, formatId, readOnly, errorLine, ariaLabel, placeholder }: CodeEditorProps) {
+export function CodeEditor({
+  value,
+  onChange,
+  formatId,
+  readOnly,
+  errorLine,
+  ariaLabel,
+  placeholder,
+  onPasteIntoEmpty,
+}: CodeEditorProps) {
   const language = useLanguage(formatId);
+
   const extensions = useMemo(
     () => [
       language,
@@ -87,6 +99,17 @@ export function CodeEditor({ value, onChange, formatId, readOnly, errorLine, ari
   useEffect(() => {
     latestOnChange.current = onChange;
   });
+  const latestPaste = useRef(onPasteIntoEmpty);
+  useEffect(() => {
+    latestPaste.current = onPasteIntoEmpty;
+  });
+  // Pasting into an empty editor is how people bring in text from elsewhere; the page may want to know.
+  const stableOnUpdate = useCallback((update: ViewUpdate) => {
+    if (!update.docChanged || update.startState.doc.length !== 0) return;
+    if (update.transactions.some((tr) => tr.isUserEvent("input.paste"))) {
+      latestPaste.current?.(update.state.doc.toString());
+    }
+  }, []);
   const stableOnChange = useCallback(
     (text: string, update: ViewUpdate) => latestOnChange.current?.(text, update),
     [],
@@ -96,6 +119,7 @@ export function CodeEditor({ value, onChange, formatId, readOnly, errorLine, ari
     <CodeMirror
       value={value}
       onChange={onChange ? stableOnChange : undefined}
+      onUpdate={onPasteIntoEmpty ? stableOnUpdate : undefined}
       extensions={extensions}
       theme={editorTheme}
       readOnly={readOnly}

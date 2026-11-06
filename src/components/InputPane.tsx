@@ -1,6 +1,6 @@
 "use client";
 
-import { PanelLeftClose } from "lucide-react";
+import { PanelLeftClose, X } from "lucide-react";
 import { getFormat } from "@/formats/registry";
 import type { FormatId, FormatSettings } from "@/formats/types";
 import { CodeEditor } from "./CodeEditor";
@@ -17,6 +17,10 @@ interface InputPaneProps {
   hidden?: boolean;
   /** Desktop: shrink the input to a thin rail. */
   onCollapse?: () => void;
+  /** "This looks like YAML": shown under the header with a one-click switch. */
+  suggestion?: { label: string; onAccept: () => void; onDismiss: () => void };
+  /** Called with the text when something is pasted into an empty input. */
+  onPasteIntoEmpty?: (text: string) => void;
 }
 
 export function InputPane({
@@ -29,6 +33,8 @@ export function InputPane({
   onSettingChange,
   hidden,
   onCollapse,
+  suggestion,
+  onPasteIntoEmpty,
 }: InputPaneProps) {
   const format = getFormat(formatId);
   const { label } = format;
@@ -69,7 +75,33 @@ export function InputPane({
           )}
         </div>
       </div>
+      {suggestion && (
+        <div
+          role="status"
+          aria-label="Format suggestion"
+          className="flex shrink-0 items-center gap-2 border-b border-line bg-[#0f1a20] px-3 py-1.5 text-[12px] text-muted"
+        >
+          <span>This looks like {suggestion.label}.</span>
+          <button
+            type="button"
+            onClick={suggestion.onAccept}
+            className="rounded-md border border-k/40 px-2 py-0.5 text-[11px] font-medium text-k hover:bg-k/10"
+          >
+            Switch to {suggestion.label}
+          </button>
+          <button
+            type="button"
+            onClick={suggestion.onDismiss}
+            aria-label="Dismiss suggestion"
+            title="Dismiss"
+            className="ml-auto rounded p-0.5 text-dim hover:text-text"
+          >
+            <X aria-hidden="true" className="size-3.5" />
+          </button>
+        </div>
+      )}
       <CodeEditor
+        onPasteIntoEmpty={onPasteIntoEmpty}
         value={value}
         onChange={onChange}
         formatId={formatId}

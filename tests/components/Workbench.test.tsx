@@ -1,20 +1,35 @@
+import { useEffect } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditorView } from "@codemirror/view";
 import type { FormatId, FormatResult, FormatSettings } from "@/formats/types";
 import { FORMATS } from "@/formats/registry";
-import { WorkbenchProvider } from "@/state/WorkbenchContext";
+import { WorkbenchProvider, useWorkbench } from "@/state/WorkbenchContext";
+
+const push = vi.fn();
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const runFormatter = vi.fn<(id: FormatId, input: string, settings: FormatSettings) => Promise<FormatResult>>();
 vi.mock("@/formats/runFormatter", () => ({ runFormatter: (...args: Parameters<typeof runFormatter>) => runFormatter(...args) }));
 
 import { Workbench } from "@/components/Workbench";
 
+// Lets a test read what the page keeps for every format.
+const probe: { inputs: Record<string, string> } = { inputs: {} };
+function InputsProbe() {
+  const { inputs } = useWorkbench();
+  useEffect(() => {
+    probe.inputs = inputs;
+  });
+  return null;
+}
+
 function renderWorkbench(formatId: FormatId) {
   return render(
     <WorkbenchProvider>
       <Workbench formatId={formatId} />
+      <InputsProbe />
     </WorkbenchProvider>,
   );
 }
@@ -30,7 +45,14 @@ function typeInput(text: string) {
   act(() => view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } }));
 }
 
+/** Pastes into the input editor, the way a real paste arrives (CodeMirror marks it "input.paste"). */
+function pasteInput(text: string) {
+  const view = EditorView.findFromDOM(inputPane().querySelector(".cm-content") as HTMLElement)!;
+  act(() => view.dispatch({ changes: { from: view.state.doc.length, insert: text }, userEvent: "input.paste" }));
+}
+
 beforeEach(() => {
+  push.mockReset();
   runFormatter.mockReset();
   runFormatter.mockImplementation(async (_id, input) => ({ ok: true, output: `formatted:${input}` }));
 });
@@ -215,5 +237,83 @@ describe("Workbench", () => {
   it("remembers the format", () => {
     renderWorkbench("xml");
     expect(localStorage.getItem("formatly:lastFormat")).toBe("xml");
+  });
+
+  describe("recognising pasted text", () => {
+    const YAML = "name: demo\nport: 80\n";
+
+    it("offers to switch when text for another format is pasted into an empty input", () => {
+      renderWorkbench("json");
+      pasteInput(YAML);
+      const bar = screen.getByRole("status", { name: "Format suggestion" });
+      expect(bar).toHaveTextContent("This looks like YAML.");
+      expect(within(bar).getByRole("button", { name: "Switch to YAML" })).toBeInTheDocument();
+      expect(push).not.toHaveBeenCalled(); // nothing happens until you say so
+    });
+
+    it("moves the text to the other format and goes there when you accept", async () => {
+      renderWorkbench("json");
+      pasteInput(YAML);
+      await userEvent.click(screen.getByRole("button", { name: "Switch to YAML" }));
+      expect(push).toHaveBeenCalledWith("/yaml");
+      expect(probe.inputs.yaml).toBe(YAML);
+      expect(probe.inputs.json).toBe("");
+    });
+
+    it("keeps everything as it is when you dismiss it", async () => {
+      renderWorkbench("json");
+      pasteInput(YAML);
+      await userEvent.click(screen.getByRole("button", { name: "Dismiss suggestion" }));
+      expect(screen.queryByRole("status", { name: "Format suggestion" })).toBeNull();
+      expect(probe.inputs.json).toBe(YAML);
+      expect(push).not.toHaveBeenCalled();
+    });
+
+    it("says nothing when the paste fits the current format", () => {
+      renderWorkbench("yaml");
+      pasteInput(YAML);
+      expect(screen.queryByRole("status", { name: "Format suggestion" })).toBeNull();
+    });
+
+    it("says nothing when the paste is not clearly another format", () => {
+      renderWorkbench("json");
+      pasteInput("just some words");
+      expect(screen.queryByRole("status", { name: "Format suggestion" })).toBeNull();
+    });
+
+    it("only looks at a paste into an empty input, not at typing or a paste into existing text", () => {
+      renderWorkbench("json");
+      typeInput(YAML); // typed, not pasted
+      expect(screen.queryByRole("status", { name: "Format suggestion" })).toBeNull();
+      pasteInput("\nmore: 1\n"); // pasted, but the input was not empty
+      expect(screen.queryByRole("status", { name: "Format suggestion" })).toBeNull();
+    });
+
+    it("goes away when the input is cleared, and does not come back by itself", async () => {
+      renderWorkbench("json");
+      pasteInput(YAML);
+      await userEvent.click(within(inputPane()).getByRole("button", { name: "Clear" }));
+      expect(screen.queryByRole("status", { name: "Format suggestion" })).toBeNull();
+      typeInput("x");
+      expect(screen.queryByRole("status", { name: "Format suggestion" })).toBeNull();
+    });
+
+    it("does not offer a switch that would replace text already waiting on the other page", () => {
+      function Seed() {
+        const { setInput } = useWorkbench();
+        useEffect(() => setInput("yaml", "keep: me\nsafe: yes\n"), [setInput]);
+        return null;
+      }
+      render(
+        <WorkbenchProvider>
+          <Seed />
+          <Workbench formatId="json" />
+          <InputsProbe />
+        </WorkbenchProvider>,
+      );
+      pasteInput(YAML);
+      expect(screen.queryByRole("status", { name: "Format suggestion" })).toBeNull();
+      expect(probe.inputs.yaml).toBe("keep: me\nsafe: yes\n");
+    });
   });
 });

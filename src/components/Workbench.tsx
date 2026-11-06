@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { detectFormat } from "@/formats/detect";
 import { getFormat } from "@/formats/registry";
 import type { FormatId } from "@/formats/types";
 import { useFormattedOutput } from "@/hooks/useFormattedOutput";
@@ -24,6 +26,24 @@ export function Workbench({ formatId }: { formatId: FormatId }) {
   const formatSettings = settings[formatId];
   const state = useFormattedOutput(formatId, input, formatSettings);
   const [outputExpanded, setOutputExpanded] = useState(false);
+  const router = useRouter();
+  // Set when text for another format is pasted into an empty input; cleared when it is emptied.
+  const [suggestedId, setSuggestedId] = useState<FormatId | null>(null);
+  const suggestedFormat = suggestedId && input !== "" ? getFormat(suggestedId) : null;
+
+  function onPasteIntoEmpty(text: string) {
+    const found = detectFormat(text, formatId);
+    // Moving the text over would replace whatever is already on that page, so don't offer it then.
+    setSuggestedId(found && inputs[found] === "" ? found : null);
+  }
+
+  function acceptSuggestion() {
+    if (!suggestedFormat) return;
+    setInput(suggestedFormat.id, input);
+    setInput(formatId, "");
+    setSuggestedId(null);
+    router.push(`/${suggestedFormat.id}`);
+  }
 
   useEffect(() => rememberFormat(formatId), [formatId]);
 
@@ -62,8 +82,20 @@ export function Workbench({ formatId }: { formatId: FormatId }) {
             <InputPane
               formatId={formatId}
               value={input}
-              onChange={(text) => setInput(formatId, text)}
-              onClear={() => setInput(formatId, "")}
+              onChange={(text) => {
+                setInput(formatId, text);
+                if (text === "") setSuggestedId(null);
+              }}
+              onClear={() => {
+                setInput(formatId, "");
+                setSuggestedId(null);
+              }}
+              onPasteIntoEmpty={onPasteIntoEmpty}
+              suggestion={
+                suggestedFormat
+                  ? { label: suggestedFormat.label, onAccept: acceptSuggestion, onDismiss: () => setSuggestedId(null) }
+                  : undefined
+              }
               errorLine={state.status === "error" ? state.error.line : undefined}
               settings={formatSettings}
               onSettingChange={(key, value) => setSetting(formatId, key, value)}
