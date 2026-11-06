@@ -61,7 +61,7 @@ describe("FormatRail", () => {
   it("phones always show symbols only (names stay readable to screen readers)", () => {
     render(<FormatRail activeId="json" collapsed={false} onToggle={() => {}} />);
     const names = document.querySelectorAll("[data-name]");
-    expect(names).toHaveLength(6);
+    expect(names).toHaveLength(FORMATS.length);
     for (const name of names) expect(name).toHaveClass("sr-only");
   });
 
