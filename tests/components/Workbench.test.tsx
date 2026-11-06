@@ -133,6 +133,53 @@ describe("Workbench", () => {
     expect(inputPane()).toBeVisible();
   });
 
+  it("hides the format capsule while the output is expanded", async () => {
+    renderWorkbench("json");
+    expect(screen.getByRole("navigation", { name: "Formats" })).toBeInTheDocument();
+    await userEvent.click(within(outputPane()).getByRole("button", { name: "Expand output" }));
+    expect(screen.queryByRole("navigation", { name: "Formats" })).toBeNull();
+    await userEvent.click(within(outputPane()).getByRole("button", { name: "Exit expanded output" }));
+    expect(screen.getByRole("navigation", { name: "Formats" })).toBeInTheDocument();
+  });
+
+  it("gives the expanded output equal space on both sides", async () => {
+    const { container } = renderWorkbench("json");
+    const main = container.querySelector("main")!;
+    expect(main.className).toMatch(/md:pl-\[84px\]/); // room for the closed capsule
+    await userEvent.click(within(outputPane()).getByRole("button", { name: "Expand output" }));
+    expect(main.className).toMatch(/md:pl-\[18px\]/);
+    expect(main.className).not.toMatch(/md:pl-\[84px\]|md:pl-\[196px\]/);
+  });
+
+  it("collapses the input to a rail and brings it back", async () => {
+    renderWorkbench("json");
+    typeInput('{"a":1}');
+    await userEvent.click(within(inputPane()).getByRole("button", { name: "Collapse input" }));
+    // jsdom loads no CSS, so check the class that hides it on desktop instead of visibility.
+    expect(inputPane().parentElement).toHaveClass("md:hidden");
+    expect(screen.getAllByText("Input · JSON")).toHaveLength(2); // the pane's header and the rail's label
+    await userEvent.click(screen.getByRole("button", { name: "Expand input" }));
+    expect(inputPane().parentElement).not.toHaveClass("md:hidden");
+    expect(inputPane().querySelector(".cm-content")).toHaveTextContent('{"a":1}'); // text survived
+  });
+
+  it("remembers a collapsed input across a format switch", async () => {
+    const first = renderWorkbench("json");
+    await userEvent.click(within(inputPane()).getByRole("button", { name: "Collapse input" }));
+    first.unmount();
+    renderWorkbench("yaml");
+    expect(screen.getByRole("button", { name: "Expand input" })).toBeInTheDocument();
+  });
+
+  it("restores the collapsed input after leaving expanded output", async () => {
+    renderWorkbench("json");
+    await userEvent.click(within(inputPane()).getByRole("button", { name: "Collapse input" }));
+    await userEvent.click(within(outputPane()).getByRole("button", { name: "Expand output" }));
+    expect(screen.queryByRole("button", { name: "Expand input" })).toBeNull(); // no rail while expanded
+    await userEvent.click(within(outputPane()).getByRole("button", { name: "Exit expanded output" }));
+    expect(screen.getByRole("button", { name: "Expand input" })).toBeInTheDocument();
+  });
+
   it("remembers the format", () => {
     renderWorkbench("xml");
     expect(localStorage.getItem("formatly:lastFormat")).toBe("xml");

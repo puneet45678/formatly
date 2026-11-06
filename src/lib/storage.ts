@@ -7,6 +7,8 @@ import type { FormatId } from "@/formats/types";
 export const STORAGE_KEYS = {
   lastFormat: "formatly:lastFormat",
   railCollapsed: "formatly:railCollapsed",
+  /** The input/output split, stored as JSON, e.g. `{"inputFraction":0.4,"inputCollapsed":false}`. */
+  layout: "formatly:layout",
 } as const;
 
 /** Where one format's settings live, stored as JSON, e.g. `{"dialect":"mysql"}`. */

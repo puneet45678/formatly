@@ -1,5 +1,6 @@
 "use client";
 
+import { PanelLeftClose } from "lucide-react";
 import { getFormat } from "@/formats/registry";
 import type { FormatId, FormatSettings } from "@/formats/types";
 import { CodeEditor } from "./CodeEditor";
@@ -14,6 +15,8 @@ interface InputPaneProps {
   settings: FormatSettings;
   onSettingChange: (key: string, value: string) => void;
   hidden?: boolean;
+  /** Desktop: shrink the input to a thin rail. */
+  onCollapse?: () => void;
 }
 
 export function InputPane({
@@ -25,6 +28,7 @@ export function InputPane({
   settings,
   onSettingChange,
   hidden,
+  onCollapse,
 }: InputPaneProps) {
   const format = getFormat(formatId);
   const { label } = format;
@@ -52,6 +56,17 @@ export function InputPane({
           <button type="button" onClick={onClear} className="chip">
             Clear
           </button>
+          {onCollapse && (
+            <button
+              type="button"
+              onClick={onCollapse}
+              aria-label="Collapse input"
+              title="Collapse input"
+              className="chip hidden p-1 md:inline-flex"
+            >
+              <PanelLeftClose aria-hidden="true" className="size-3" />
+            </button>
+          )}
         </div>
       </div>
       <CodeEditor

@@ -9,11 +9,12 @@ import { rememberFormat, useWorkbench } from "@/state/WorkbenchContext";
 import { FormatRail } from "./FormatRail";
 import { InputPane } from "./InputPane";
 import { OutputPane } from "./OutputPane";
+import { SplitView } from "./SplitView";
 
 /** The whole tool for one format: rail on the left, input and output panes. */
 export function Workbench({ formatId }: { formatId: FormatId }) {
   const format = getFormat(formatId);
-  const { inputs, setInput, settings, setSetting, railCollapsed, toggleRail } = useWorkbench();
+  const { inputs, setInput, settings, setSetting, railCollapsed, toggleRail, layout, setLayout } = useWorkbench();
   const input = inputs[formatId];
   const formatSettings = settings[formatId];
   const state = useFormattedOutput(formatId, input, formatSettings);
@@ -36,31 +37,40 @@ export function Workbench({ formatId }: { formatId: FormatId }) {
   return (
     <div className="relative flex min-h-0 flex-1 flex-col">
       {/* Floats over the grid; the panes leave room for it (left on desktop, bottom on phones). */}
-      <FormatRail activeId={formatId} collapsed={railCollapsed} onToggle={toggleRail} />
+      <FormatRail activeId={formatId} collapsed={railCollapsed} onToggle={toggleRail} hidden={outputExpanded} />
       <main
         className={cn(
-          "grid min-h-0 flex-1 grid-cols-1 gap-3.5 overflow-y-auto p-3 pb-[76px] md:overflow-hidden md:p-[18px]",
+          "flex min-h-0 flex-1 flex-col overflow-y-auto p-3 pb-[76px] md:overflow-hidden md:p-[18px]",
           "md:transition-[padding] md:duration-200 md:ease-out motion-reduce:transition-none",
-          railCollapsed ? "md:pl-[84px]" : "md:pl-[196px]",
-          !outputExpanded && "md:grid-cols-2",
+          // Expanded output has no capsule beside it, so it gets the same margin on both sides.
+          outputExpanded ? "md:pl-[18px]" : railCollapsed ? "md:pl-[84px]" : "md:pl-[196px]",
         )}
       >
-        {/* Kept mounted while hidden so the editor keeps its text and undo history. */}
-        <InputPane
-          hidden={outputExpanded}
-          formatId={formatId}
-          value={input}
-          onChange={(text) => setInput(formatId, text)}
-          onClear={() => setInput(formatId, "")}
-          errorLine={state.status === "error" ? state.error.line : undefined}
-          settings={formatSettings}
-          onSettingChange={(key, value) => setSetting(formatId, key, value)}
-        />
-        <OutputPane
-          format={format}
-          state={state}
-          expanded={outputExpanded}
-          onToggleExpand={() => setOutputExpanded((expanded) => !expanded)}
+        <SplitView
+          leftHidden={outputExpanded}
+          railLabel={`Input · ${format.label}`}
+          layout={layout}
+          onLayoutChange={setLayout}
+          left={
+            <InputPane
+              formatId={formatId}
+              value={input}
+              onChange={(text) => setInput(formatId, text)}
+              onClear={() => setInput(formatId, "")}
+              errorLine={state.status === "error" ? state.error.line : undefined}
+              settings={formatSettings}
+              onSettingChange={(key, value) => setSetting(formatId, key, value)}
+              onCollapse={() => setLayout({ ...layout, inputCollapsed: true })}
+            />
+          }
+          right={
+            <OutputPane
+              format={format}
+              state={state}
+              expanded={outputExpanded}
+              onToggleExpand={() => setOutputExpanded((expanded) => !expanded)}
+            />
+          }
         />
       </main>
     </div>
