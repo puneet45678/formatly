@@ -39,6 +39,8 @@ describe("renderMermaid", () => {
     expect(mock.render).toHaveBeenCalledWith(expect.stringMatching(/^formatly-mermaid-\d+$/), "graph TD; A-->B");
   });
 
+  const FIVE_LINES = "a\nb\nc\nd\ne"; // long enough that the fake positions below point inside it
+
   // Shaped like real jison parser errors: Error(message) with hash = { text, token, line, loc, expected }.
   const jisonError = (message: string, hash: object) => Object.assign(new Error(message), { hash });
 
@@ -68,7 +70,7 @@ describe("renderMermaid", () => {
       }),
     );
     const { renderMermaid } = await freshModule();
-    expect(await renderMermaid("x")).toEqual({
+    expect(await renderMermaid(FIVE_LINES)).toEqual({
       ok: false,
       error: { message: 'Unexpected "["', line: 3, column: 11 },
     });
@@ -77,7 +79,7 @@ describe("renderMermaid", () => {
   it("uses the Expecting line when there is no hash", async () => {
     mock.parse.mockRejectedValue(new Error("Parse error on line 2:\nA--\n--^\nExpecting 'X', got 'Y'\n"));
     const { renderMermaid } = await freshModule();
-    expect(await renderMermaid("x")).toEqual({
+    expect(await renderMermaid(FIVE_LINES)).toEqual({
       ok: false,
       error: { message: "Expecting 'X', got 'Y'", line: 2 },
     });
@@ -86,7 +88,7 @@ describe("renderMermaid", () => {
   it("detects EOF from the message when the hash has no token", async () => {
     mock.parse.mockRejectedValue(jisonError("Parse error on line 1:\nA\n^\nExpecting 'X', got 'EOF'", {}));
     const { renderMermaid } = await freshModule();
-    expect(await renderMermaid("x")).toEqual({
+    expect(await renderMermaid(FIVE_LINES)).toEqual({
       ok: false,
       error: { message: "The diagram ends before it is complete", line: 1 },
     });
@@ -95,7 +97,7 @@ describe("renderMermaid", () => {
   it("falls back to the line in the message", async () => {
     mock.parse.mockRejectedValue(new Error("Lexical error on line 2. Unrecognized text."));
     const { renderMermaid } = await freshModule();
-    expect(await renderMermaid("x")).toEqual({
+    expect(await renderMermaid(FIVE_LINES)).toEqual({
       ok: false,
       error: { message: "Lexical error on line 2. Unrecognized text.", line: 2 },
     });
@@ -143,5 +145,46 @@ describe("mermaidErrorPosition", () => {
     const { mermaidErrorPosition } = await freshModule();
     const err = { message: "x", hash: { loc: { first_line: 2, first_column: 0 } } };
     expect(mermaidErrorPosition(err)).toEqual({ line: 2, column: 1 });
+  });
+});
+
+// Mermaid drops frontmatter, `%%` comments, directives and leading blank lines before it parses, and
+// reports lines of what is left. Each case: a source, the loc real Mermaid 12 reported for it (probed
+// against the real parser), and the line the error is really on.
+describe("mermaidErrorPosition with the original source", () => {
+  const cases: [string, string, { first_line: number; first_column: number }, number][] = [
+    ["frontmatter", "---\ntitle: Hello\n---\ngraph TD\n  A-->B\n  B-->", { first_line: 3, first_column: 3 }, 6],
+    ["leading comments", "%% my diagram\n%% second\ngraph TD\n  A-->B\n  B-->", { first_line: 3, first_column: 3 }, 5],
+    ["comments inside", "graph TD\n  A-->B\n%% c1\n%% c2\n  B--> C(]", { first_line: 3, first_column: 8 }, 5],
+    ["leading blank lines", "\n\n\ngraph TD\n  A-->B\n  B-->", { first_line: 3, first_column: 3 }, 6],
+    ["leading directive", "%%{init: {'theme':'dark'}}%%\ngraph TD\n  A-->B\n  B-->", { first_line: 3, first_column: 3 }, 4],
+    ["directive in the middle", "graph TD\n  A-->B\n%%{init: {'theme':'dark'}}%%\n  B-->", { first_line: 4, first_column: 3 }, 4],
+    ["blank line before a comment", "graph TD\n  A-->B\n\n%% c\n  B-->", { first_line: 3, first_column: 3 }, 5],
+    ["Windows line endings", "graph TD\r\n  A-->B\r\n%% c\r\n  B-->", { first_line: 3, first_column: 3 }, 4],
+    ["nothing removed", "graph TD\n  A-->B\n  B-->", { first_line: 3, first_column: 3 }, 3],
+  ];
+
+  it.each(cases)("maps the line back past removed lines: %s", async (_name, source, loc, line) => {
+    const { mermaidErrorPosition } = await freshModule();
+    expect(mermaidErrorPosition({ message: "x", hash: { loc } }, source)).toEqual({ line, column: loc.first_column + 1 });
+  });
+
+  it("maps the 'line N' fallback too", async () => {
+    const { mermaidErrorPosition } = await freshModule();
+    const source = "---\ntitle: t\n---\ngraph TD\n  A-->B";
+    expect(mermaidErrorPosition(new Error("Lexical error on line 2. Unrecognized text."), source)).toEqual({ line: 5 });
+  });
+
+  it("keeps the line when no source is given", async () => {
+    const { mermaidErrorPosition } = await freshModule();
+    expect(mermaidErrorPosition({ message: "x", hash: { loc: { first_line: 3, first_column: 0 } } })).toEqual({ line: 3, column: 1 });
+  });
+
+  it("renderMermaid reports the line in the original text", async () => {
+    mock.parse.mockRejectedValue(
+      Object.assign(new Error("Parse error"), { hash: { token: "EOF", text: "", loc: { first_line: 2, first_column: 3 } } }),
+    );
+    const { renderMermaid } = await freshModule();
+    expect(await renderMermaid("%% note\ngraph TD\n  B-->")).toMatchObject({ ok: false, error: { line: 3 } });
   });
 });

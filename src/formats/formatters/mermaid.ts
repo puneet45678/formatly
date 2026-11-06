@@ -41,7 +41,7 @@ export async function renderMermaid(source: string): Promise<FormatResult> {
     const { svg } = await mermaid.render(id, source);
     return { ok: true, output: svg };
   } catch (err) {
-    const { line, column } = mermaidErrorPosition(err);
+    const { line, column } = mermaidErrorPosition(err, source);
     return formatError(errorMessage(err), line, column);
   } finally {
     // A failed render can leave scratch elements in the page: `d<id>` (the wrapper) and sometimes `<id>`.
@@ -71,8 +71,67 @@ function errorMessage(err: unknown): string {
   return lines[0] ?? "Invalid diagram";
 }
 
-/** Finds where Mermaid says the error is: the parser's location, else "line N" in the message, else line 1. */
-export function mermaidErrorPosition(err: unknown): { line: number; column?: number } {
+// Before parsing, Mermaid removes the frontmatter block, `%%{...}%%` directives, `%%` comment lines and
+// leading whitespace, then reports lines of what is left. These are the same patterns it uses (mermaid 12).
+const FRONTMATTER = /^[ \t]*---[ \t]*\n[\s\S]*?\n[ \t]*---[ \t]*(?:\n|$)/;
+const DIRECTIVE = /%{2}{\s*(?:(\w+)\s*:|(\w+))\s*(?:(\w+)|((?:(?!}%{2}).|\r?\n)*))?\s*(?:}%{2})?/gi;
+const COMMENT_LINE = /^\s*%%(?!{)[^\n]+\n?/gm;
+const LEADING_SPACE = /^\s+/;
+
+/**
+ * Turns a line (and column) of the text Mermaid actually parsed back into the line of `source`.
+ * It replays Mermaid's cleanup while remembering where each remaining character came from.
+ */
+function toSourcePosition(source: string, line: number, column?: number): { line: number; column?: number } {
+  const normalized = source.replace(/\r\n?/g, "\n");
+  let text = normalized;
+  let origin = Array.from({ length: text.length }, (_, i) => i); // origin[i]: where text[i] was in `normalized`
+
+  for (const pattern of [FRONTMATTER, DIRECTIVE, COMMENT_LINE, LEADING_SPACE]) {
+    const keptText: string[] = [];
+    const keptOrigin: number[] = [];
+    let last = 0;
+    for (const match of text.matchAll(new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`))) {
+      keptText.push(text.slice(last, match.index));
+      keptOrigin.push(...origin.slice(last, match.index));
+      last = match.index + match[0].length;
+    }
+    keptText.push(text.slice(last));
+    keptOrigin.push(...origin.slice(last));
+    text = keptText.join("");
+    origin = keptOrigin;
+  }
+
+  // Start of the reported line within the cleaned text (clamped to the end if the line is past it).
+  let start = 0;
+  for (let n = 1; n < line; n++) {
+    const next = text.indexOf("\n", start);
+    if (next === -1) break;
+    start = next + 1;
+  }
+  const at = origin[Math.min(start, origin.length - 1)] ?? 0;
+  const lineStart = normalized.lastIndexOf("\n", at - 1) + 1;
+  const sourceLine = normalized.slice(0, at).split("\n").length;
+  return column === undefined ? { line: sourceLine } : { line: sourceLine, column: column + (at - lineStart) };
+}
+
+/**
+ * Finds where Mermaid says the error is: the parser's location, else "line N" in the message, else line 1.
+ * Pass `source` to get the line in the text you typed rather than in the text Mermaid parsed.
+ */
+export function mermaidErrorPosition(err: unknown, source?: string): { line: number; column?: number } {
+  const position = parserPosition(err);
+  // With no location in the error, the line 1 fallback is already a line of the source.
+  if (source === undefined || !hasLocation(err)) return position;
+  return toSourcePosition(source, position.line, position.column);
+}
+
+function hasLocation(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return typeof (err as { hash?: { loc?: { first_line?: unknown } } } | null)?.hash?.loc?.first_line === "number" || /line (\d+)/i.test(message);
+}
+
+function parserPosition(err: unknown): { line: number; column?: number } {
   // Parser errors carry `hash.loc` (1-based line, 0-based column). Not part of Mermaid's types, so read it defensively.
   const loc = (err as { hash?: { loc?: { first_line?: number; first_column?: number } } } | null)?.hash?.loc;
   if (typeof loc?.first_line === "number") {
