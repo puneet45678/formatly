@@ -44,6 +44,12 @@ export interface FormatDefinition {
    * An empty `invalid` means the format has no invalid input (any text is valid).
    */
   examples: { valid: string; invalid: string };
+  /**
+   * How likely `input` is this format, from 0 (not at all) to 1 (certainly). Optional: a format without
+   * one is simply never suggested. It runs on the page whenever something is pasted into an empty
+   * input, so it must be quick and must not import the format's library (that would defeat lazy loading).
+   */
+  detect?: (input: string) => number;
   /** Loads the formatter on first use, so each format's library is its own chunk. */
   load: () => Promise<Formatter>;
 }
