@@ -12,7 +12,9 @@ const POSITION_SUFFIX = / at line \d+, column \d+:?$/;
 
 export function formatYaml(input: string): FormatResult {
   // A file can hold several documents separated by "---"; each is parsed on its own.
-  const docs = parseAllDocuments(input);
+  // The "failsafe" schema keeps every scalar as the text you wrote. The default schema turns
+  // numbers into JS numbers and prints them back, which changes 9007199254740993 and 1e400.
+  const docs = parseAllDocuments(input, { schema: "failsafe" });
 
   for (const doc of docs) {
     const error = doc.errors[0];

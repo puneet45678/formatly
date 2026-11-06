@@ -42,4 +42,21 @@ describe("formatYaml", () => {
       ok: false,
       error: { message: "Map keys must be unique", line: 2 },
     }));
+
+  it("keeps numbers exactly as written", () => {
+    const input = [
+      "id: 9007199254740993",
+      "big: 12345678901234567890123",
+      "neg: -9223372036854775808",
+      "huge: 1e400",
+      "pi: 3.141592653589793238462643",
+      "pad: 1.50",
+      "hex: 0xFF",
+      "",
+    ].join("\n");
+    expect(formatYaml(input)).toEqual({ ok: true, output: input });
+  });
+
+  it("keeps bare words such as TRUE and ~ as written", () =>
+    expect(formatYaml("a: TRUE\nb: ~\nc: Yes\n")).toEqual({ ok: true, output: "a: TRUE\nb: ~\nc: Yes\n" }));
 });
