@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { detectFormat } from "@/formats/detect";
 import { FORMATS } from "@/formats/registry";
-import type { FormatId } from "@/formats/types";
+import type { FormatDefinition, FormatId } from "@/formats/types";
 
 // What a person would paste, from another format's page. `from` is the page they are on.
 const SAMPLES: { name: string; text: string; is: FormatId }[] = [
@@ -104,5 +104,23 @@ describe("every format's own valid example", () => {
       const page = otherPage(f.id);
       expect(detectFormat(f.examples.valid, page)).toBe(f.id);
     }
+  });
+});
+
+describe("formats without a detector", () => {
+  // A new format does not have to say how to recognise itself; it is just never suggested.
+  const plain = (id: string): FormatDefinition => ({
+    id, label: id, glyph: id, extension: id, mime: "text/plain", output: "text", runsOn: "worker",
+    settings: [], examples: { valid: "", invalid: "" }, load: async () => () => ({ ok: true, output: "" }),
+  });
+
+  it("are skipped, and never break detection of the others", () => {
+    const formats = [plain("csv"), ...FORMATS];
+    expect(detectFormat("name: demo\nport: 80\n", "json", formats)).toBe("yaml");
+    expect(detectFormat("a,b\n1,2", "json", formats)).toBeNull();
+  });
+
+  it("can be the page you are on", () => {
+    expect(detectFormat('{"a":1}', "csv" as FormatId, [plain("csv"), ...FORMATS])).toBe("json");
   });
 });
