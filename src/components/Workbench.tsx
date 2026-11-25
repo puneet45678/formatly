@@ -7,12 +7,14 @@ import { getFormat } from "@/formats/registry";
 import type { FormatId } from "@/formats/types";
 import { useFormattedOutput } from "@/hooks/useFormattedOutput";
 import { cn } from "@/lib/utils";
-import { rememberFormat, useWorkbench } from "@/state/WorkbenchContext";
+import { rememberFormat, useWorkbench, type WorkbenchMode } from "@/state/WorkbenchContext";
 import { FormatRail } from "./FormatRail";
 import { InputPane } from "./InputPane";
 import { Intro } from "./Intro";
 import { OutputPane } from "./OutputPane";
 import { SiteAbout } from "./SiteAbout";
+import { CompareView } from "./CompareView";
+import { ModeSwitch } from "./ModeSwitch";
 import { SplitView } from "./SplitView";
 
 /**
@@ -26,10 +28,24 @@ import { SplitView } from "./SplitView";
  */
 export function Workbench({ formatId, children }: { formatId: FormatId; children?: ReactNode }) {
   const format = getFormat(formatId);
-  const { inputs, setInput, settings, setSetting, railCollapsed, toggleRail, layout, setLayout } = useWorkbench();
+  const { inputs, setInput, settings, setSetting, railCollapsed, toggleRail, layout, setLayout, modes, setMode, compares, setCompareText } =
+    useWorkbench();
   const input = inputs[formatId];
   const formatSettings = settings[formatId];
   const state = useFormattedOutput(formatId, input, formatSettings);
+  const mode = modes[formatId];
+  const compare = compares[formatId];
+
+  function changeMode(next: WorkbenchMode) {
+    // Starting a comparison: what's in the input is the natural "original".
+    if (next === "compare" && compare.original === "" && compare.changed === "" && input !== "") {
+      setCompareText(formatId, "original", input);
+    }
+    setMode(formatId, next);
+  }
+  const modeSwitch = <ModeSwitch mode={mode} onChange={changeMode} />;
+  // On the divider when there is one; otherwise (phones, collapsed input) in a row above the panes.
+  const switchOnDivider = !layout.inputCollapsed;
   const [outputExpanded, setOutputExpanded] = useState(false);
   const router = useRouter();
   // Set when text for another format is pasted into an empty input. It only stands while the input
@@ -79,7 +95,20 @@ export function Workbench({ formatId, children }: { formatId: FormatId; children
         )}
       >
         {!outputExpanded && <Intro compact={input !== ""} />}
+        {mode === "compare" ? (
+          <CompareView
+            format={format}
+            texts={compare}
+            settings={formatSettings}
+            onChange={(side, text) => setCompareText(formatId, side, text)}
+            mode={mode}
+            onModeChange={changeMode}
+          />
+        ) : (
+        <>
+        {!outputExpanded && <div className={cn("mb-2.5 flex justify-center", switchOnDivider && "md:hidden")}>{modeSwitch}</div>}
         <SplitView
+          center={modeSwitch}
           leftHidden={outputExpanded}
           railLabel={`Input · ${format.label}`}
           layout={layout}
@@ -118,6 +147,8 @@ export function Workbench({ formatId, children }: { formatId: FormatId; children
             />
           }
         />
+        </>
+        )}
       </main>
       </div>
       {!outputExpanded && (

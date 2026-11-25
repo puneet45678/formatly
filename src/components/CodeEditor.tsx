@@ -64,7 +64,7 @@ const PLAIN_TEXT: Extension = [];
  * The format's syntax highlighting, loaded on demand. Until it arrives (a
  * moment on first use) the editor works as plain text.
  */
-function useLanguage(formatId: FormatId): Extension {
+export function useLanguage(formatId: FormatId): Extension {
   // Remembers which format the loaded language is for, so after a format
   // switch the old language is never applied to the new format's text.
   const [loaded, setLoaded] = useState<{ formatId: FormatId; language: Extension } | null>(null);

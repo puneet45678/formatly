@@ -30,4 +30,5 @@ export const json = {
   },
   detect: detectJson,
   load: () => import("../formatters/json").then((m) => m.formatJson),
+  canonicalize: () => import("../canonicalizers/json").then((m) => m.sortJsonKeys),
 } as const satisfies FormatDefinition;

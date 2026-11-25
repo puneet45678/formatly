@@ -22,6 +22,12 @@ interface SplitViewProps {
   onLayoutChange: (next: SplitLayout) => void;
   /** Hide the left side completely (expanded output). It stays mounted so it keeps its state. */
   leftHidden?: boolean;
+  /**
+   * A small control shown on the divider, between the two panes (the mode switch). The pane
+   * headers leave room for it. Only shown where the divider is; the caller shows it elsewhere
+   * when there is none (phones, collapsed input).
+   */
+  center?: ReactNode;
 }
 
 /**
@@ -31,7 +37,7 @@ interface SplitViewProps {
  * While dragging, the width is written straight to a CSS variable, so no React render happens per
  * mouse move; the layout is committed once when the drag ends.
  */
-export function SplitView({ left, right, railLabel, layout, onLayoutChange, leftHidden = false }: SplitViewProps) {
+export function SplitView({ left, right, railLabel, layout, onLayoutChange, leftHidden = false, center }: SplitViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const drag = useRef<{ fraction: number; moved: boolean } | null>(null);
   const leftPane = useRef<HTMLDivElement>(null);
@@ -111,7 +117,11 @@ export function SplitView({ left, right, railLabel, layout, onLayoutChange, left
     <div
       ref={container}
       style={{ "--f": layout.inputFraction } as CSSProperties}
-      className="flex min-h-0 flex-1 flex-col gap-3.5 md:flex-row md:gap-0 data-[dragging=true]:cursor-col-resize data-[dragging=true]:select-none"
+      className={cn(
+        "flex min-h-0 flex-1 flex-col gap-3.5 md:flex-row md:gap-0 data-[dragging=true]:cursor-col-resize data-[dragging=true]:select-none",
+        // Room in the two headers for the control that sits on the divider between them.
+        center && showDivider && "md:[&>div:first-child_.pane-header]:pr-14 md:[&>div:last-child_.pane-header]:pl-14",
+      )}
     >
       {/* Kept mounted while hidden or collapsed so the editor keeps its text and undo history. */}
       <div
@@ -162,8 +172,19 @@ export function SplitView({ left, right, railLabel, layout, onLayoutChange, left
           onPointerCancel={onPointerEnd}
           onDoubleClick={() => onLayoutChange(DEFAULT_LAYOUT)}
           onKeyDown={onKeyDown}
-          className="group w-3 shrink-0 cursor-col-resize touch-none items-center justify-center outline-none max-md:hidden md:flex"
+          className="group relative w-3 shrink-0 cursor-col-resize touch-none items-center justify-center outline-none max-md:hidden md:flex"
         >
+          {center && (
+            // Clicks on the control mustn't start a drag or reset the split.
+            <div
+              className="absolute top-[7px] left-1/2 z-10 -translate-x-1/2 cursor-default"
+              onPointerDown={(e) => e.stopPropagation()}
+              onDoubleClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              {center}
+            </div>
+          )}
           <span className="h-9 w-[3px] rounded-full bg-[#2e2e2e] transition-[height,background-color] group-hover:h-14 group-hover:bg-k group-focus-visible:h-14 group-focus-visible:bg-k in-data-[dragging=true]:h-14 in-data-[dragging=true]:bg-k motion-reduce:transition-none" />
         </div>
       )}

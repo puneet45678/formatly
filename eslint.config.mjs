@@ -58,7 +58,8 @@ const eslintConfig = defineConfig([
   },
   {
     // Listed in full because this block replaces the one above for formatter files.
-    files: ["src/formats/formatters/**"],
+    // Canonicalizers follow the same rule: one library, ../errors and ../types.
+    files: ["src/formats/formatters/**", "src/formats/canonicalizers/**"],
     rules: { "no-restricted-imports": ["error", { patterns: [coreMayNotImport, formatterMayNotImport] }] },
   },
   {

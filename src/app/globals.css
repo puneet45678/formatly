@@ -199,6 +199,19 @@ body {
   font-family: var(--font-jetbrains-mono), monospace;
   font-size: 12px;
 }
+/* Compare mode: the merge view fills its pane, so the editors can be clicked anywhere below the text. */
+.merge-host .cm-mergeView {
+  min-height: 100%;
+}
+.merge-host .cm-mergeViewEditors {
+  min-height: 100%;
+}
+.merge-host .cm-mergeViewEditor {
+  display: flex;
+}
+.merge-host .cm-mergeViewEditor > .cm-editor {
+  flex: 1;
+}
 .md-preview table {
   border-collapse: collapse;
   display: block;

@@ -19,6 +19,18 @@ interface WorkbenchState {
   /** How the input and output panes share the width (desktop). Remembered. */
   layout: SplitLayout;
   setLayout: (layout: SplitLayout) => void;
+  /** Format the input, or compare two versions. Per format, in memory. */
+  modes: Record<FormatId, WorkbenchMode>;
+  setMode: (id: FormatId, mode: WorkbenchMode) => void;
+  /** The two texts compare mode diffs, per format. In memory only, like the input. */
+  compares: Record<FormatId, CompareTexts>;
+  setCompareText: (id: FormatId, side: keyof CompareTexts, text: string) => void;
+}
+
+export type WorkbenchMode = "format" | "compare";
+export interface CompareTexts {
+  original: string;
+  changed: string;
 }
 
 const WorkbenchContext = createContext<WorkbenchState | null>(null);
@@ -59,6 +71,16 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   // The format capsule starts closed (symbols only) until the user opens it.
   const [railCollapsed, setRailCollapsed] = useState(true);
   const [layout, setLayoutState] = useState(DEFAULT_LAYOUT);
+  const [modes, setModes] = useState(() => byFormat((): WorkbenchMode => "format"));
+  const [compares, setCompares] = useState(() => byFormat((): CompareTexts => ({ original: "", changed: "" })));
+
+  const setMode = useCallback((id: FormatId, mode: WorkbenchMode) => {
+    setModes((prev) => ({ ...prev, [id]: mode }));
+  }, []);
+
+  const setCompareText = useCallback((id: FormatId, side: keyof CompareTexts, text: string) => {
+    setCompares((prev) => ({ ...prev, [id]: { ...prev[id], [side]: text } }));
+  }, []);
 
   // Read after mount so the first render matches the static HTML.
   // (Reading during render would make the server and browser HTML differ.)
@@ -111,8 +133,8 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ inputs, setInput, settings, setSetting, railCollapsed, toggleRail, layout, setLayout }),
-    [inputs, setInput, settings, setSetting, railCollapsed, toggleRail, layout, setLayout],
+    () => ({ inputs, setInput, settings, setSetting, railCollapsed, toggleRail, layout, setLayout, modes, setMode, compares, setCompareText }),
+    [inputs, setInput, settings, setSetting, railCollapsed, toggleRail, layout, setLayout, modes, setMode, compares, setCompareText],
   );
 
   return <WorkbenchContext.Provider value={value}>{children}</WorkbenchContext.Provider>;

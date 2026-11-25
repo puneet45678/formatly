@@ -36,12 +36,13 @@ export const GUIDES: Record<FormatId, FormatGuide> = {
     title: "JSON Formatter & Validator",
     description:
       "Format, beautify and validate JSON in your browser. Errors show the exact line and column. Numbers stay exactly as written. Nothing is uploaded.",
-    aliases: ["JSON beautifier", "JSON validator", "JSON pretty print", "JSON viewer", "JSON lint"],
+    aliases: ["JSON beautifier", "JSON validator", "JSON pretty print", "JSON viewer", "JSON lint", "JSON diff", "Compare JSON"],
     heading: "JSON formatter and validator",
     intro:
       "Paste JSON to indent it and check that it's valid. If it isn't, you get a plain-English message and the line and column of the problem, and the line is marked in the editor.",
     features: [
       "Strict JSON: comments, trailing commas, single quotes and unquoted keys are reported, with a clear message for each",
+      "Compare two JSON documents: differences highlighted side by side, after laying both out the same way; Sort keys makes key order not count",
       "Errors give the line and column, and the line is highlighted",
       "Numbers are kept exactly as written: long integers and values like 1e400 are not rounded",
       "Indent with 2 spaces, 4 spaces or tabs",
@@ -66,12 +67,13 @@ export const GUIDES: Record<FormatId, FormatGuide> = {
     title: "YAML Formatter & Validator",
     description:
       "Format and validate YAML in your browser. Keeps comments, quote styles and multiple documents. Errors show the line and column. Nothing is uploaded.",
-    aliases: ["YAML beautifier", "YAML validator", "YAML lint", "YAML pretty print"],
+    aliases: ["YAML beautifier", "YAML validator", "YAML lint", "YAML pretty print", "YAML diff"],
     heading: "YAML formatter and validator",
     intro:
       "Paste YAML to re-indent it consistently and check that it parses. Comments, quote styles and document separators are kept, so the output still reads like your file.",
     features: [
       "Keeps comments, quote styles and --- document separators",
+      "Compare two YAML files side by side, with the differences highlighted",
       "Formats files with several documents",
       "Errors give the line and column, and the line is highlighted",
       "Indent with 2 or 4 spaces (YAML doesn't allow tabs for indentation)",
@@ -94,12 +96,13 @@ export const GUIDES: Record<FormatId, FormatGuide> = {
     title: "Mermaid Diagram Viewer & Editor",
     description:
       "Preview Mermaid diagrams as you type: flowcharts, sequence diagrams and more. Zoom, pan, and download SVG or PNG. Runs in your browser.",
-    aliases: ["Mermaid live editor", "Mermaid viewer", "Mermaid diagram preview", "Mermaid to SVG", "Mermaid to PNG"],
+    aliases: ["Mermaid live editor", "Mermaid viewer", "Mermaid diagram preview", "Mermaid to SVG", "Mermaid to PNG", "Mermaid diff"],
     heading: "Mermaid diagram viewer",
     intro:
       "Type or paste Mermaid and the diagram is drawn as you go. Syntax errors point at the line, and the finished diagram can be zoomed, panned and downloaded.",
     features: [
       "Live preview of flowcharts, sequence diagrams and the other Mermaid diagram types",
+      "Compare two versions of a diagram's source side by side, with the differences highlighted",
       "Syntax errors give the line, and the line is highlighted",
       "Zoom with the mouse wheel or buttons, drag to pan, fit to view",
       "Download the diagram as SVG or PNG",
@@ -127,12 +130,13 @@ export const GUIDES: Record<FormatId, FormatGuide> = {
     title: "XML Formatter & Validator",
     description:
       "Format, beautify and validate XML in your browser. Errors show the line and column. Keeps comments, CDATA and mixed content. Nothing is uploaded.",
-    aliases: ["XML beautifier", "XML validator", "XML pretty print", "XML viewer"],
+    aliases: ["XML beautifier", "XML validator", "XML pretty print", "XML viewer", "XML diff"],
     heading: "XML formatter and validator",
     intro:
       "Paste XML to indent it and check that it's well-formed. A missing or mismatched tag is reported with its line and column instead of being formatted into something misleading.",
     features: [
       "Checks that the XML is well-formed before formatting it",
+      "Compare two XML documents side by side, after laying both out the same way",
       "Errors give the line and column, and the line is highlighted",
       "Keeps comments, CDATA sections and text mixed with tags, such as <p>Hello <b>world</b></p>",
       "Indent with 2 spaces, 4 spaces or tabs",
@@ -155,12 +159,13 @@ export const GUIDES: Record<FormatId, FormatGuide> = {
     title: "SQL Formatter",
     description:
       "Format SQL queries in your browser for Standard SQL, SQL Server, PostgreSQL and MySQL. Uppercase keywords, clear errors, nothing uploaded.",
-    aliases: ["SQL beautifier", "SQL pretty print", "T-SQL formatter", "PostgreSQL formatter", "MySQL formatter"],
+    aliases: ["SQL beautifier", "SQL pretty print", "T-SQL formatter", "PostgreSQL formatter", "MySQL formatter", "SQL diff"],
     heading: "SQL formatter",
     intro:
       "Paste a query to lay it out one clause per line with uppercase keywords. Pick your database's dialect so its own syntax is understood.",
     features: [
       "Dialects: Standard SQL, SQL Server (T-SQL), PostgreSQL and MySQL",
+      "Compare two queries side by side, after laying both out the same way",
       "Keywords in uppercase, one clause per line",
       "Errors give the line and column, and suggest a dialect when standard SQL can't read the query",
       "Indent with 2 spaces, 4 spaces or tabs",
@@ -183,12 +188,13 @@ export const GUIDES: Record<FormatId, FormatGuide> = {
     title: "Markdown Formatter & Preview",
     description:
       "Format Markdown consistently with Prettier and preview it, including tables and task lists. Runs in your browser; nothing is uploaded.",
-    aliases: ["Markdown beautifier", "Markdown preview", "Markdown viewer", "Prettier Markdown", "Markdown with Mermaid preview"],
+    aliases: ["Markdown beautifier", "Markdown preview", "Markdown viewer", "Prettier Markdown", "Markdown with Mermaid preview", "Markdown diff"],
     heading: "Markdown formatter and preview",
     intro:
       "Paste Markdown to tidy it the way Prettier does, then read it rendered. Switch between the preview and the formatted source at any time.",
     features: [
       "Formatting by Prettier, the formatter most projects use",
+      "Compare two versions of a document side by side, with the differences highlighted",
       "Rendered preview with GitHub-style tables, task lists and strikethrough",
       "Mermaid diagrams in ```mermaid code blocks are drawn in the preview, as on GitHub",
       "Raw HTML in the Markdown isn't rendered, and remote images load only when you click",

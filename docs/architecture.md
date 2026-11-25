@@ -140,3 +140,11 @@ Both editors have a fold gutter like VS Code's: a chevron appears beside each li
 
 `tests/components/folding.test.ts` checks that every format's editor folds its own formatted output, so a new format without folding fails there. Folds reset when the output is replaced by a new result.
 
+## Compare mode
+
+Each format page can compare two versions instead of formatting one. A **Format / Compare** dropdown (`ModeSwitch`) sits between the two panes: on the divider in format mode (`SplitView`'s `center` slot; the headers leave room for it), in the middle of the header in compare mode, and in a row above the panes where there is no divider (phones, collapsed input). The mode and both texts are kept per format, in memory only, like the input; switching to compare starts with the input as the original.
+
+- `CompareView` shows CodeMirror's merge view (`MergeEditor`): both sides editable, changes highlighted, unchanged stretches collapsed, next/previous change, a "+2 −1 lines" summary, swap and clear.
+- **Format both** lays both sides out with the format's own formatter (the same per-side results that show Valid / Error in the header), so whitespace stops counting as a change. **Sort keys** appears for formats with a `canonicalize` capability on their definition (JSON: `canonicalizers/json.ts` sorts object keys by walking the syntax tree and re-emitting each value's original text, so numbers stay exact). Both are ordinary edits: Ctrl+Z in a side takes them back.
+- Diagram formats compare their source as written (their output is a drawing, not text).
+

@@ -379,4 +379,37 @@ describe("Workbench", () => {
       expect(probe.inputs.yaml).toBe("keep: me\nsafe: yes\n");
     });
   });
+
+  describe("compare mode", () => {
+    const modeSelect = () => screen.getAllByRole("combobox", { name: "Mode" })[0];
+
+    it("offers Format and Compare, starting in Format", () => {
+      renderWorkbench("json");
+      expect(modeSelect()).toHaveValue("format");
+      expect(within(modeSelect()).getAllByRole("option").map((o) => o.textContent)).toEqual(["Format", "Compare"]);
+    });
+
+    it("switches to Compare with the input as the original, and back without losing the input", async () => {
+      renderWorkbench("json");
+      typeInput('{"a":1}');
+      await userEvent.selectOptions(modeSelect(), "compare");
+      const compare = screen.getByRole("region", { name: "Compare" });
+      expect(within(compare).getByText("Original · JSON")).toBeInTheDocument();
+      expect(within(compare).getByText("Changed · JSON")).toBeInTheDocument();
+      expect(compare.querySelector('[aria-label="Original JSON"]')).toHaveTextContent('{"a":1}');
+      expect(screen.queryByRole("region", { name: "Output" })).toBeNull();
+
+      await userEvent.selectOptions(modeSelect(), "format");
+      expect(screen.getByRole("region", { name: "Output" })).toBeInTheDocument();
+      expect(inputPane().querySelector(".cm-content")).toHaveTextContent('{"a":1}');
+    });
+
+    it("offers Sort keys only for a format that can canonicalize", async () => {
+      renderWorkbench("yaml");
+      await userEvent.selectOptions(modeSelect(), "compare");
+      expect(screen.queryByRole("button", { name: "Sort keys" })).toBeNull();
+      expect(screen.getByRole("button", { name: "Format both" })).toBeInTheDocument();
+    });
+  });
 });
+

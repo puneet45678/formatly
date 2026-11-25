@@ -77,4 +77,10 @@ export interface FormatDefinition {
   detect?: (input: string) => number;
   /** Loads the formatter on first use, so each format's library is its own chunk. */
   load: () => Promise<Formatter>;
+  /**
+   * Optional: loads a function that rewrites valid input so documents holding
+   * the same data compare equal (for JSON, object keys sorted). Compare mode
+   * offers it as "Sort keys"; the UI never names a format.
+   */
+  canonicalize?: () => Promise<(input: string) => string>;
 }
