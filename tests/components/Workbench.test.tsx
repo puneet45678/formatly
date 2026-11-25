@@ -58,7 +58,9 @@ describe("Workbench", () => {
     typeInput("a\nb\nc");
     expect(await within(outputPane()).findByText("Line 3, column 5: Unexpected token")).toBeInTheDocument();
     expect(within(outputPane()).getByText("Error")).toBeInTheDocument();
-    expect(inputPane().querySelector(".cm-error-line")).toHaveTextContent("c");
+    // CodeMirror's wrapper applies the line decoration in a passive effect after
+    // the render that shows the message, so it can land a moment later: wait for it.
+    await waitFor(() => expect(inputPane().querySelector(".cm-error-line")).toHaveTextContent("c"));
   });
 
   it("announces status and errors to screen readers", async () => {

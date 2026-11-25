@@ -8,7 +8,7 @@ Everything the app knows about a format lives in three places, and nowhere else:
 
 1. **A definition** (`src/formats/definitions/<id>.ts`): plain data. Its id, label, capsule symbol, file type, settings, where it runs, two example inputs, and a `load()` that fetches its formatter. The fields are documented on `FormatDefinition` in `src/formats/types.ts`.
 2. **A formatter** (`src/formats/formatters/<id>.ts`): a pure function, `(input, settings) → FormatResult`.
-3. **A UI entry** (`src/components/format-ui.ts`): its CodeMirror language and, optionally, a preview component.
+3. **A UI entry** (`src/components/format-ui.ts`): its CodeMirror language (highlighting and code folding) and, optionally, a preview component.
 
 The rest of the app loops over the list of definitions and never names a format. The route, the capsule button, the tagline word, the download file name, the settings dropdowns and the formatter dispatch all come from the definition.
 
@@ -123,4 +123,13 @@ Each format page is static HTML with the tool at full height and, below it, a gu
 ## AI assistants: the MCP server
 
 `mcp/` is a second consumer of the core, next to the website: an [MCP](https://modelcontextprotocol.io) server that gives assistants a `format` tool for the text formats (Mermaid needs a browser, so it isn't offered). It calls `formatInput`, like the worker does, so assistants get the website's exact behaviour, and it runs on the user's machine, so nothing is sent anywhere. Like the core, it may not import React, Next.js or UI code (an ESLint rule). See `mcp/README.md` and [ADR 0003](adr/0003-assistants-use-a-local-mcp-server.md).
+
+## Code folding
+
+Both editors have a fold gutter like VS Code's: a chevron appears beside each line that starts a block while the pointer is over the gutter, and stays on folded lines. Which lines fold comes from each format's language in `format-ui.ts`:
+
+- **JSON, XML, YAML, Markdown:** the grammar's own folding rules (objects and arrays, elements, mappings and sequences, heading sections).
+- **SQL and Mermaid:** by indentation (`components/indentFolding.ts`), as VS Code does where it has no rules. SQL's grammar only folds whole statements, while formatted SQL puts each clause's body on indented lines; Mermaid has no grammar.
+
+`tests/components/folding.test.ts` checks that every format's editor folds its own formatted output, so a new format without folding fails there. Folds reset when the output is replaced by a new result.
 
