@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import CodeMirror, { type Extension } from "@uiw/react-codemirror";
 import { Decoration, EditorView, type ViewUpdate } from "@codemirror/view";
-import { HighlightStyle, syntaxHighlighting } from "@codemirror/language";
+import { HighlightStyle, foldGutter, syntaxHighlighting } from "@codemirror/language";
 import { tags as t } from "@lezer/highlight";
 import type { FormatId } from "@/formats/types";
 import { FORMAT_UI } from "./format-ui";
@@ -38,6 +38,21 @@ const theme = EditorView.theme(
     ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": { backgroundColor: "#264f78 !important" },
     ".cm-placeholder": { color: "#5c5c5c" },
     ".cm-error-line": { backgroundColor: "rgba(248,113,113,.12)" },
+    // Fold chevrons, as in VS Code: shown while the pointer is over the gutter,
+    // always shown on a folded line so the collapsed block stays findable.
+    ".cm-foldGutter .cm-gutterElement": { padding: "0 4px", cursor: "pointer" },
+    ".cm-fold-marker": { display: "inline-block", color: "#6b7280", transition: "transform 120ms, opacity 120ms" },
+    ".cm-fold-open": { transform: "rotate(90deg)", opacity: "0" },
+    ".cm-gutters:hover .cm-fold-open": { opacity: "1" },
+    ".cm-fold-closed": { color: "#cfcfcf" },
+    ".cm-foldPlaceholder": {
+      backgroundColor: "#1c1c1c",
+      border: "1px solid #2e2e2e",
+      borderRadius: "4px",
+      color: "#9ca3af",
+      padding: "0 5px",
+      margin: "0 2px",
+    },
   },
   { dark: true },
 );
@@ -46,12 +61,28 @@ const theme = EditorView.theme(
 // setup whenever this object (or onChange) changes identity.
 const basicSetup = {
   lineNumbers: true,
+  // Our own fold gutter (below) replaces the default markers; the fold keymap stays on.
   foldGutter: false,
   highlightActiveLine: false,
   highlightActiveLineGutter: false,
   autocompletion: false,
   searchKeymap: true,
 };
+
+/**
+ * The fold gutter: a chevron beside each line that starts a foldable block,
+ * like VS Code. Which lines fold comes from the format's language (format-ui.ts).
+ * Kept at module level for the same reason as basicSetup.
+ */
+const folding = foldGutter({
+  markerDOM(open) {
+    const marker = document.createElement("span");
+    marker.className = `cm-fold-marker ${open ? "cm-fold-open" : "cm-fold-closed"}`;
+    marker.textContent = "›";
+    marker.title = open ? "Fold" : "Unfold";
+    return marker;
+  },
+});
 
 function errorLineExtension(line: number): Extension {
   return EditorView.decorations.of((view) => {
@@ -97,6 +128,7 @@ export function CodeEditor({ value, onChange, formatId, readOnly, errorLine, ari
   const extensions = useMemo(
     () => [
       language,
+      folding,
       syntaxHighlighting(highlight),
       EditorView.contentAttributes.of({ "aria-label": ariaLabel }),
       ...(errorLine ? [errorLineExtension(errorLine)] : []),
