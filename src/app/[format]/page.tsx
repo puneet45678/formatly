@@ -40,12 +40,9 @@ export default async function FormatPage({ params }: PageProps<"/[format]">) {
   const { format } = await params;
   if (!isFormatId(format)) notFound();
   return (
-    <>
-      {/* The tool fills the visible area; the guide is below it, for readers and search engines. */}
-      <div className="flex h-full min-h-0 shrink-0 flex-col">
-        <Workbench formatId={format} />
-      </div>
+    // The guide sits below the tool, before the site's About text, for readers and search engines.
+    <Workbench formatId={format}>
       <FormatGuide format={getFormat(format)} />
-    </>
+    </Workbench>
   );
 }

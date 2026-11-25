@@ -60,7 +60,7 @@ describe("formatly MCP server", () => {
   it("reports a syntax error with its line and column, as an error the assistant can act on", async () => {
     const result = await client.callTool({ name: "format", arguments: { format: "json", input: '{\n  "a": 1,\n}' } });
     expect(result.isError).toBe(true);
-    expect(text(result)).toBe("Invalid JSON at line 3, column 1: Property names must be in double quotes");
+    expect(text(result)).toBe("Invalid JSON at line 3, column 1: Trailing commas aren't allowed in JSON");
     expect(result.structuredContent).toMatchObject({ status: "invalid", line: 3, column: 1 });
   });
 

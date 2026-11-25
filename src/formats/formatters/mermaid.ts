@@ -47,6 +47,34 @@ function loadMermaid() {
 // Mermaid wants a unique element id per render, or two renders can clash.
 let renderCount = 0;
 
+const REMOTE_IMAGE_MESSAGE = "Images in diagrams must be embedded (a data: address). Other addresses would be fetched from another server while you type.";
+
+// "A@{ img: "https://..." }": the image shape sets `new Image().src` while drawing.
+const IMAGE_SHAPE = /@\{[^}]*?\bimg\s*:\s*("[^"]*"|'[^']*'|[^,}\s]+)/g;
+// "<img src=...>" or "<image href=...>" inside a label.
+const IMAGE_TAG = /<\s*(?:img|image)\b[^>]*?\b(?:src|href)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi;
+
+function isEmbedded(value: string): boolean {
+  return /^data:/i.test(value.replace(/^["']/, "").trim());
+}
+
+/**
+ * Finds the first image that is not embedded. Mermaid's strict mode stops scripts but still lets the
+ * browser fetch image addresses, which would tell another server what you are typing.
+ * Anything that is not a data: address counts, so encoded or relative addresses cannot slip through.
+ */
+function findOutsideImage(source: string): { line: number; column: number } | undefined {
+  for (const pattern of [IMAGE_SHAPE, IMAGE_TAG]) {
+    for (const match of source.matchAll(pattern)) {
+      if (isEmbedded(match[1])) continue;
+      const before = source.slice(0, match.index);
+      const line = before.split(/\r\n?|\n/).length;
+      return { line, column: match.index - Math.max(before.lastIndexOf("\n"), before.lastIndexOf("\r")) };
+    }
+  }
+  return undefined;
+}
+
 /**
  * The SVG goes into the page as HTML (and out through Copy and Download), so it
  * is sanitized here, once, for every consumer. securityLevel "strict" already
@@ -73,6 +101,10 @@ export async function renderMermaid(source: string): Promise<FormatResult> {
       `This diagram is too large to draw (${source.length.toLocaleString("en")} characters; the limit is ${MAX_DIAGRAM_CHARS.toLocaleString("en")})`,
     );
   }
+
+  const outside = findOutsideImage(source);
+  if (outside) return formatError(REMOTE_IMAGE_MESSAGE, outside.line, outside.column);
+
   const mermaid = await loadMermaid();
   const id = `formatly-mermaid-${++renderCount}`;
   try {
@@ -83,7 +115,7 @@ export async function renderMermaid(source: string): Promise<FormatResult> {
     if (isEdgeLimitError(err)) {
       throw new TooComplexError(`This diagram has more than ${MAX_DIAGRAM_EDGES} connections, the most that can be drawn`);
     }
-    const { line, column } = mermaidErrorPosition(err);
+    const { line, column } = mermaidErrorPosition(err, source);
     return formatError(errorMessage(err), line, column);
   } finally {
     // A failed render can leave scratch elements in the page: `d<id>` (the wrapper) and sometimes `<id>`.
@@ -118,8 +150,67 @@ function errorMessage(err: unknown): string {
   return lines[0] ?? "Invalid diagram";
 }
 
-/** Finds where Mermaid says the error is: the parser's location, else "line N" in the message, else line 1. */
-export function mermaidErrorPosition(err: unknown): { line: number; column?: number } {
+// Before parsing, Mermaid removes the frontmatter block, `%%{...}%%` directives, `%%` comment lines and
+// leading whitespace, then reports lines of what is left. These are the same patterns it uses (mermaid 12).
+const FRONTMATTER = /^[ \t]*---[ \t]*\n[\s\S]*?\n[ \t]*---[ \t]*(?:\n|$)/;
+const DIRECTIVE = /%{2}{\s*(?:(\w+)\s*:|(\w+))\s*(?:(\w+)|((?:(?!}%{2}).|\r?\n)*))?\s*(?:}%{2})?/gi;
+const COMMENT_LINE = /^\s*%%(?!{)[^\n]+\n?/gm;
+const LEADING_SPACE = /^\s+/;
+
+/**
+ * Turns a line (and column) of the text Mermaid actually parsed back into the line of `source`.
+ * It replays Mermaid's cleanup while remembering where each remaining character came from.
+ */
+function toSourcePosition(source: string, line: number, column?: number): { line: number; column?: number } {
+  const normalized = source.replace(/\r\n?/g, "\n");
+  let text = normalized;
+  let origin = Array.from({ length: text.length }, (_, i) => i); // origin[i]: where text[i] was in `normalized`
+
+  for (const pattern of [FRONTMATTER, DIRECTIVE, COMMENT_LINE, LEADING_SPACE]) {
+    const keptText: string[] = [];
+    const keptOrigin: number[] = [];
+    let last = 0;
+    for (const match of text.matchAll(new RegExp(pattern.source, pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`))) {
+      keptText.push(text.slice(last, match.index));
+      keptOrigin.push(...origin.slice(last, match.index));
+      last = match.index + match[0].length;
+    }
+    keptText.push(text.slice(last));
+    keptOrigin.push(...origin.slice(last));
+    text = keptText.join("");
+    origin = keptOrigin;
+  }
+
+  // Start of the reported line within the cleaned text (clamped to the end if the line is past it).
+  let start = 0;
+  for (let n = 1; n < line; n++) {
+    const next = text.indexOf("\n", start);
+    if (next === -1) break;
+    start = next + 1;
+  }
+  const at = origin[Math.min(start, origin.length - 1)] ?? 0;
+  const lineStart = normalized.lastIndexOf("\n", at - 1) + 1;
+  const sourceLine = normalized.slice(0, at).split("\n").length;
+  return column === undefined ? { line: sourceLine } : { line: sourceLine, column: column + (at - lineStart) };
+}
+
+/**
+ * Finds where Mermaid says the error is: the parser's location, else "line N" in the message, else line 1.
+ * Pass `source` to get the line in the text you typed rather than in the text Mermaid parsed.
+ */
+export function mermaidErrorPosition(err: unknown, source?: string): { line: number; column?: number } {
+  const position = parserPosition(err);
+  // With no location in the error, the line 1 fallback is already a line of the source.
+  if (source === undefined || !hasLocation(err)) return position;
+  return toSourcePosition(source, position.line, position.column);
+}
+
+function hasLocation(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return typeof (err as { hash?: { loc?: { first_line?: unknown } } } | null)?.hash?.loc?.first_line === "number" || /line (\d+)/i.test(message);
+}
+
+function parserPosition(err: unknown): { line: number; column?: number } {
   // Parser errors carry `hash.loc` (1-based line, 0-based column). Not part of Mermaid's types, so read it defensively.
   const loc = (err as { hash?: { loc?: { first_line?: number; first_column?: number } } } | null)?.hash?.loc;
   if (typeof loc?.first_line === "number") {

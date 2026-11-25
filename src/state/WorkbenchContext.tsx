@@ -4,6 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { FORMATS, defaultSettings, sanitizeSettings } from "@/formats/registry";
 import type { FormatId, FormatSettings } from "@/formats/types";
 import { STORAGE_KEYS, readStored, settingsKey, writeStored } from "@/lib/storage";
+import { DEFAULT_LAYOUT, sanitizeLayout, type SplitLayout } from "@/lib/split";
 
 interface WorkbenchState {
   /** What the user typed for each format. Lives in memory only. */
@@ -15,6 +16,9 @@ interface WorkbenchState {
   /** Format capsule closed to symbols only (desktop; phones always show symbols). */
   railCollapsed: boolean;
   toggleRail: () => void;
+  /** How the input and output panes share the width (desktop). Remembered. */
+  layout: SplitLayout;
+  setLayout: (layout: SplitLayout) => void;
 }
 
 const WorkbenchContext = createContext<WorkbenchState | null>(null);
@@ -38,11 +42,23 @@ function readStoredSettings(id: FormatId): FormatSettings {
   }
 }
 
+/** The stored layout, or the default when it is missing or corrupt. */
+function readStoredLayout(): SplitLayout {
+  const stored = readStored(STORAGE_KEYS.layout);
+  if (stored === null) return DEFAULT_LAYOUT;
+  try {
+    return sanitizeLayout(JSON.parse(stored));
+  } catch {
+    return DEFAULT_LAYOUT; // not valid JSON
+  }
+}
+
 export function WorkbenchProvider({ children }: { children: ReactNode }) {
   const [inputs, setInputs] = useState(emptyInputs);
   const [settings, setSettings] = useState(initialSettings);
   // The format capsule starts closed (symbols only) until the user opens it.
   const [railCollapsed, setRailCollapsed] = useState(true);
+  const [layout, setLayoutState] = useState(DEFAULT_LAYOUT);
 
   // Read after mount so the first render matches the static HTML.
   // (Reading during render would make the server and browser HTML differ.)
@@ -50,6 +66,7 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     /* eslint-disable react-hooks/set-state-in-effect -- one-time sync from browser storage after hydration */
     setSettings(byFormat(readStoredSettings));
     if (readStored(STORAGE_KEYS.railCollapsed) === "false") setRailCollapsed(false);
+    setLayoutState(readStoredLayout());
     /* eslint-enable react-hooks/set-state-in-effect */
   }, []);
 
@@ -87,9 +104,15 @@ export function WorkbenchProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setLayout = useCallback((next: SplitLayout) => {
+    const clean = sanitizeLayout(next);
+    setLayoutState(clean);
+    writeStored(STORAGE_KEYS.layout, JSON.stringify(clean));
+  }, []);
+
   const value = useMemo(
-    () => ({ inputs, setInput, settings, setSetting, railCollapsed, toggleRail }),
-    [inputs, setInput, settings, setSetting, railCollapsed, toggleRail],
+    () => ({ inputs, setInput, settings, setSetting, railCollapsed, toggleRail, layout, setLayout }),
+    [inputs, setInput, settings, setSetting, railCollapsed, toggleRail, layout, setLayout],
   );
 
   return <WorkbenchContext.Provider value={value}>{children}</WorkbenchContext.Provider>;

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TopBar } from "@/components/TopBar";
+import { FORMATS } from "@/formats/registry";
 
 describe("TopBar", () => {
   it("shows the product name", () => {
@@ -29,7 +30,9 @@ describe("TopBar", () => {
     const tagline = screen.getByTestId("tagline");
     expect(tagline).toHaveTextContent("format your");
     expect(tagline.querySelector('[aria-hidden="true"]')).not.toBeNull();
-    expect(screen.getByText("Formats JSON, YAML, Mermaid, XML, SQL and Markdown")).toHaveClass("sr-only");
+    const labels = FORMATS.map((f) => f.label);
+    const sentence = `Formats ${labels.slice(0, -1).join(", ")} and ${labels.at(-1)}`;
+    expect(screen.getByText(sentence)).toHaveClass("sr-only");
   });
 
   it("hides the tagline on narrow screens", () => {

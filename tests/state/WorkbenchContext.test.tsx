@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { act, fireEvent, renderHook } from "@testing-library/react";
+import { FORMATS } from "@/formats/registry";
 import { WorkbenchProvider, rememberFormat, useWorkbench } from "@/state/WorkbenchContext";
 
 function renderWorkbench() {
@@ -9,7 +10,7 @@ function renderWorkbench() {
 describe("WorkbenchContext", () => {
   it("starts with empty inputs", () => {
     const { result } = renderWorkbench();
-    expect(result.current.inputs).toEqual({ json: "", yaml: "", mermaid: "", xml: "", sql: "", markdown: "" });
+    expect(result.current.inputs).toEqual(Object.fromEntries(FORMATS.map((f) => [f.id, ""])));
   });
 
   it("keeps each format input separate", () => {
@@ -107,5 +108,32 @@ describe("WorkbenchContext", () => {
   it("rememberFormat stores the last format", () => {
     rememberFormat("xml");
     expect(localStorage.getItem("formatly:lastFormat")).toBe("xml");
+  });
+
+  it("starts with an even split and the input open", () => {
+    const { result } = renderWorkbench();
+    expect(result.current.layout).toEqual({ inputFraction: 0.5, inputCollapsed: false });
+  });
+
+  it("changes the layout and remembers it", () => {
+    const { result } = renderWorkbench();
+    act(() => result.current.setLayout({ inputFraction: 0.3, inputCollapsed: true }));
+    expect(result.current.layout).toEqual({ inputFraction: 0.3, inputCollapsed: true });
+    expect(JSON.parse(localStorage.getItem("formatly:layout")!)).toEqual({ inputFraction: 0.3, inputCollapsed: true });
+  });
+
+  it("restores a stored layout", () => {
+    localStorage.setItem("formatly:layout", '{"inputFraction":0.35,"inputCollapsed":true}');
+    const { result } = renderWorkbench();
+    expect(result.current.layout).toEqual({ inputFraction: 0.35, inputCollapsed: true });
+  });
+
+  it("ignores a corrupt stored layout", () => {
+    for (const bad of ["{oops", '{"inputFraction":9}', "null", '"x"', '{"inputFraction":"0.3"}']) {
+      localStorage.setItem("formatly:layout", bad);
+      const { result, unmount } = renderWorkbench();
+      expect(result.current.layout).toEqual({ inputFraction: 0.5, inputCollapsed: false });
+      unmount();
+    }
   });
 });

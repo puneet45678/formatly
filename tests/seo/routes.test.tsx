@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { FormatGuide, formatStructuredData, jsonLd } from "@/components/FormatGuide";
+import { FormatGuide, formatStructuredData, guideQuestions, jsonLd } from "@/components/FormatGuide";
+import { ABOUT } from "@/content/site";
 import { GUIDES } from "@/content/guides";
 import { FORMATS, getFormat } from "@/formats/registry";
 import robots, { AI_CRAWLERS } from "@/app/robots";
@@ -59,7 +60,18 @@ describe("structured data", () => {
     const [app, faq] = formatStructuredData(getFormat("json"), "https://formatly.dev");
     expect(app).toMatchObject({ "@type": "WebApplication", url: "https://formatly.dev/json", isAccessibleForFree: true });
     expect(faq).toMatchObject({ "@type": "FAQPage" });
-    expect((faq as { mainEntity: unknown[] }).mainEntity).toHaveLength(GUIDES.json.faq.length);
+    expect((faq as { mainEntity: { name: string }[] }).mainEntity.map((q) => q.name)).toEqual(
+      guideQuestions(getFormat("json")).map((q) => q.question),
+    );
+  });
+
+  it("leaves out questions the site's About section already answers, so none appears twice", () => {
+    const about = new Set(ABOUT.questions.map((q) => q.question));
+    for (const f of FORMATS) {
+      const shown = guideQuestions(f).map((q) => q.question);
+      expect(shown.filter((q) => about.has(q))).toEqual([]);
+      expect(shown.length).toBeGreaterThan(0);
+    }
   });
 
   it("leaves the URL out when the site URL isn't known", () => {
@@ -77,8 +89,9 @@ describe("structured data", () => {
 describe("FormatGuide", () => {
   it("renders the heading, the questions and links to every other formatter", () => {
     const { container } = render(<FormatGuide format={getFormat("sql")} />);
-    expect(screen.getByRole("heading", { level: 1, name: GUIDES.sql.heading })).toBeInTheDocument();
-    for (const { question } of GUIDES.sql.faq) expect(screen.getByText(question)).toBeInTheDocument();
+    // h2: the page's h1 is the intro above the tool.
+    expect(screen.getByRole("heading", { level: 2, name: GUIDES.sql.heading })).toBeInTheDocument();
+    for (const { question } of guideQuestions(getFormat("sql"))) expect(screen.getByText(question)).toBeInTheDocument();
     const links = screen.getAllByRole("link").map((a) => a.getAttribute("href"));
     expect(links.sort()).toEqual(FORMATS.filter((f) => f.id !== "sql").map((f) => `/${f.id}`).sort());
     expect(container.querySelector('script[type="application/ld+json"]')).not.toBeNull();

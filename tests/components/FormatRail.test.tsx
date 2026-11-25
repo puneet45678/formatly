@@ -1,18 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { FormatRail } from "@/components/FormatRail";
+import { FORMATS } from "@/formats/registry";
 
 describe("FormatRail", () => {
   it("links every format to its route", () => {
     render(<FormatRail activeId="json" />);
-    expect(screen.getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual([
-      "/json",
-      "/yaml",
-      "/mermaid",
-      "/xml",
-      "/sql",
-      "/markdown",
-    ]);
+    expect(screen.getAllByRole("link").map((a) => a.getAttribute("href"))).toEqual(FORMATS.map((f) => `/${f.id}`));
   });
 
   it("marks the active format", () => {
@@ -67,7 +61,7 @@ describe("FormatRail", () => {
   it("phones always show symbols only (names stay readable to screen readers)", () => {
     render(<FormatRail activeId="json" collapsed={false} onToggle={() => {}} />);
     const names = document.querySelectorAll("[data-name]");
-    expect(names).toHaveLength(6);
+    expect(names).toHaveLength(FORMATS.length);
     for (const name of names) expect(name).toHaveClass("sr-only");
   });
 
