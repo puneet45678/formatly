@@ -140,3 +140,12 @@ Both editors have a fold gutter like VS Code's: a chevron appears beside each li
 
 `tests/components/folding.test.ts` checks that every format's editor folds its own formatted output, so a new format without folding fails there. Folds reset when the output is replaced by a new result.
 
+## Automatic fixes
+
+A format can offer to fix common mistakes with one optional field on its definition: `repair: () => import("../repairers/<id>")…`, a function from broken text to fixed text (`Repairer` in `types.ts`). Invalid input then shows a **Fix automatically** button; the UI never names a format (`hooks/useAutoFix.ts`). JSON is the first: trailing commas, comments, single quotes, unquoted keys, Python constants, missing commas and brackets (`repairers/json.ts`, built on jsonrepair, which works on the text so numbers keep their exact digits).
+
+- **All or nothing.** `repairInput` returns the fixed text only if the format's own formatter then accepts it; otherwise the user's text stays as it was and the reason is shown, with a line and column when the repairer gives a position.
+- **Undoable.** The fix replaces the input like a paste would, so Ctrl+Z in the input brings back the original; the output says so.
+- **In the worker.** `runRepair` sits next to `runFormatter` and goes through the same worker client (a request's `op` is "format" or "repair"), with the same timeout. jsonrepair's cost grows with the number of fixes (each removed trailing comma copies its output so far): 256 KB with every record broken takes ~350 ms, 1 MB ~5 s, so it must not run on the page. Typing while a fix runs cancels it, because the text it was fixing changed.
+- Repairers follow the formatters' import rule: their own library, `../errors` and `../types` only. The contract test checks that a format with a repairer fixes its own invalid example.
+

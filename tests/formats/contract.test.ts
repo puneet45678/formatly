@@ -54,4 +54,12 @@ describe.each(cases.map((c) => [c.f.id, c] as const))("formatter contract: %s", 
     expect(result.error.line).toBeGreaterThanOrEqual(1);
     expect(result.error.line).toBeLessThanOrEqual(lineCount);
   });
+
+  // A format that offers an automatic fix must be able to fix its own invalid example.
+  it.skipIf(isStub || !f.repair || f.examples.invalid === "")("fixes its invalid example", async () => {
+    const { repairInput } = await import("@/formats/repairInput");
+    const outcome = await repairInput(f.id, f.examples.invalid, settings);
+    expect(outcome.kind).toBe("repaired");
+  });
 });
+

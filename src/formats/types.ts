@@ -35,6 +35,25 @@ export type FormatOutcome =
   | { kind: "failed"; reason: FailureReason; message: string }
   | { kind: "cancelled" };
 
+/**
+ * Turns input with common mistakes into input the format accepts, keeping
+ * everything else as written (e.g. trailing commas and comments out of JSON).
+ * Throws when it can't; an error with a numeric `position` (a character
+ * offset) gets its line and column reported.
+ */
+export type Repairer = (input: string) => string;
+
+/**
+ * What an automatic fix produced. A fix is all or nothing: "repaired" means
+ * the result passes the format's own formatter, so a partly fixed text never
+ * replaces what the user typed.
+ */
+export type RepairOutcome =
+  | { kind: "repaired"; output: string }
+  | { kind: "unrepairable"; message: string }
+  | { kind: "failed"; reason: FailureReason; message: string }
+  | { kind: "cancelled" };
+
 /** A format's chosen settings, e.g. `{ dialect: "mysql" }` for SQL. Empty for formats without settings. */
 export type FormatSettings = Readonly<Record<string, string>>;
 
@@ -77,4 +96,9 @@ export interface FormatDefinition {
   detect?: (input: string) => number;
   /** Loads the formatter on first use, so each format's library is its own chunk. */
   load: () => Promise<Formatter>;
+  /**
+   * Optional: loads a function that fixes common mistakes. When present, invalid
+   * input offers a "Fix automatically" button; the UI never names a format.
+   */
+  repair?: () => Promise<Repairer>;
 }

@@ -36,13 +36,14 @@ export const GUIDES: Record<FormatId, FormatGuide> = {
     title: "JSON Formatter & Validator",
     description:
       "Format, beautify and validate JSON in your browser. Errors show the exact line and column. Numbers stay exactly as written. Nothing is uploaded.",
-    aliases: ["JSON beautifier", "JSON validator", "JSON pretty print", "JSON viewer", "JSON lint"],
+    aliases: ["JSON beautifier", "JSON validator", "JSON pretty print", "JSON viewer", "JSON lint", "JSON fixer", "JSON repair"],
     heading: "JSON formatter and validator",
     intro:
       "Paste JSON to indent it and check that it's valid. If it isn't, you get a plain-English message and the line and column of the problem, and the line is marked in the editor.",
     features: [
       "Strict JSON: comments, trailing commas, single quotes and unquoted keys are reported, with a clear message for each",
       "Errors give the line and column, and the line is highlighted",
+      "Fix automatically: trailing commas, comments, single quotes, unquoted keys, Python's None/True/False and missing brackets, in one click (undo with Ctrl+Z)",
       "Numbers are kept exactly as written: long integers and values like 1e400 are not rounded",
       "Indent with 2 spaces, 4 spaces or tabs",
       "Large documents format in a background thread, so typing never freezes",
@@ -53,7 +54,7 @@ export const GUIDES: Record<FormatId, FormatGuide> = {
       {
         question: "Why does my JSON with comments show an error?",
         answer:
-          "Standard JSON doesn't allow comments or trailing commas, so this formatter reports them instead of silently accepting input that other programs would reject.",
+          "Standard JSON doesn't allow comments or trailing commas, so this formatter reports them instead of silently accepting input that other programs would reject. Press Fix automatically to remove them; Ctrl+Z undoes the fix.",
       },
       {
         question: "Will formatting change my numbers?",

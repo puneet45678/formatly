@@ -72,3 +72,33 @@ describe("formatter time budgets", () => {
     });
   }
 });
+
+describe("automatic fix budgets", () => {
+  // jsonrepair's cost grows with the number of fixes (each removed trailing
+  // comma copies its output so far), so both shapes are guarded. Measured
+  // (Node 22): one mistake in 1 MB ~110 ms; every record broken, 256 KB ~350 ms,
+  // 1 MB ~5 s. Fixes run in the worker, so this is about waiting, not freezing.
+  const brokenRecords = (bytes: number) => {
+    let s = "[";
+    for (let i = 0; s.length < bytes; i++) s += `{'id': ${i}, name: 'user-${i}', active: True,},`;
+    return s + "]";
+  };
+
+  test("json: one mistake in 1 MB is fixed within 1,000 ms", { timeout: 4_000 }, async () => {
+    const input = FIXTURES.json(1024 * KB).replace(/\]$/, ",]");
+    const { repairInput } = await import("@/formats/repairInput");
+    const start = performance.now();
+    const outcome = await repairInput("json", input, defaultSettings("json"));
+    expect(outcome.kind).toBe("repaired");
+    expect(performance.now() - start).toBeLessThan(1_000);
+  });
+
+  test("json: 256 KB with every record broken is fixed within 1,500 ms", { timeout: 6_000 }, async () => {
+    const { repairInput } = await import("@/formats/repairInput");
+    const start = performance.now();
+    const outcome = await repairInput("json", brokenRecords(256 * KB), defaultSettings("json"));
+    expect(outcome.kind).toBe("repaired");
+    expect(performance.now() - start).toBeLessThan(1_500);
+  });
+});
+

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EditorView } from "@codemirror/view";
-import type { FormatId, FormatOutcome, FormatSettings } from "@/formats/types";
+import type { FormatId, FormatOutcome, FormatSettings, RepairOutcome } from "@/formats/types";
 import { FORMATS } from "@/formats/registry";
 import { WorkbenchProvider, useWorkbench } from "@/state/WorkbenchContext";
 
@@ -11,7 +11,11 @@ const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
 
 const runFormatter = vi.fn<(id: FormatId, input: string, settings: FormatSettings) => Promise<FormatOutcome>>();
-vi.mock("@/formats/runFormatter", () => ({ runFormatter: (...args: Parameters<typeof runFormatter>) => runFormatter(...args) }));
+const runRepair = vi.fn<(id: FormatId, input: string, settings: FormatSettings) => Promise<RepairOutcome>>();
+vi.mock("@/formats/runFormatter", () => ({
+  runFormatter: (...args: Parameters<typeof runFormatter>) => runFormatter(...args),
+  runRepair: (...args: Parameters<typeof runRepair>) => runRepair(...args),
+}));
 
 import { Workbench } from "@/components/Workbench";
 
@@ -55,6 +59,7 @@ beforeEach(() => {
   push.mockReset();
   runFormatter.mockReset();
   runFormatter.mockImplementation(async (_id, input) => ({ kind: "ok", output: `formatted:${input}` }));
+  runRepair.mockReset();
 });
 
 describe("Workbench", () => {
@@ -379,4 +384,59 @@ describe("Workbench", () => {
       expect(probe.inputs.yaml).toBe("keep: me\nsafe: yes\n");
     });
   });
+
+  describe("automatic fix", () => {
+    const invalidUntilFixed = () =>
+      runFormatter.mockImplementation(async (_id, input) =>
+        input.includes(",}")
+          ? { kind: "invalid", error: { message: "Trailing commas aren't allowed in JSON", line: 1, column: 8 } }
+          : { kind: "ok", output: `formatted:${input}` },
+      );
+    const inputText = () => (inputPane().querySelector(".cm-content") as HTMLElement).textContent;
+
+    it("offers a fix for invalid JSON, and applying it replaces the input", async () => {
+      invalidUntilFixed();
+      runRepair.mockResolvedValue({ kind: "repaired", output: '{"a": 1}' });
+      renderWorkbench("json");
+      typeInput('{"a": 1,}');
+      fireEvent.click(await within(outputPane()).findByRole("button", { name: "Fix automatically" }));
+      expect(runRepair).toHaveBeenCalledWith("json", '{"a": 1,}', expect.any(Object));
+      await waitFor(() => expect(inputText()).toBe('{"a": 1}'));
+      expect(await within(outputPane()).findByText("Valid")).toBeInTheDocument();
+      expect(within(outputPane()).getByRole("status")).toHaveTextContent("Fixed automatically. Undo with ⌘Z / Ctrl+Z in the input.");
+    });
+
+    it("doesn't offer a fix for a format without one", async () => {
+      runFormatter.mockResolvedValue({ kind: "invalid", error: { message: "Bad", line: 1 } });
+      renderWorkbench("yaml");
+      typeInput("a: [");
+      expect(await within(outputPane()).findByText("Line 1: Bad")).toBeInTheDocument();
+      expect(within(outputPane()).queryByRole("button", { name: "Fix automatically" })).toBeNull();
+    });
+
+    it("says why when it can't fix, and leaves the text alone", async () => {
+      invalidUntilFixed();
+      runRepair.mockResolvedValue({ kind: "unrepairable", message: 'Unexpected character ":" at line 4, column 1' });
+      renderWorkbench("json");
+      typeInput('{"a": 1,}');
+      fireEvent.click(await within(outputPane()).findByRole("button", { name: "Fix automatically" }));
+      expect(await within(outputPane()).findByText('Couldn\'t fix it automatically: Unexpected character ":" at line 4, column 1')).toBeInTheDocument();
+      expect(inputText()).toBe('{"a": 1,}');
+    });
+
+    it("shows Fixing… while it runs, and ignores the result if the text changed meanwhile", async () => {
+      invalidUntilFixed();
+      let finish!: () => void;
+      runRepair.mockImplementation(() => new Promise((resolve) => (finish = () => resolve({ kind: "repaired", output: '{"a": 1}' }))));
+      renderWorkbench("json");
+      typeInput('{"a": 1,}');
+      fireEvent.click(await within(outputPane()).findByRole("button", { name: "Fix automatically" }));
+      expect(within(outputPane()).getByRole("button", { name: "Fixing…" })).toBeDisabled();
+      typeInput('{"a": 2,}');
+      await act(async () => finish());
+      // The fix was for older text, so it isn't applied over what was typed since.
+      expect(inputText()).toBe('{"a": 2,}');
+    });
+  });
 });
+
