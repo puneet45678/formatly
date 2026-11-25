@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { detectFormat } from "@/formats/detect";
 import { getFormat } from "@/formats/registry";
 import type { FormatId } from "@/formats/types";
+import { useAutoFix } from "@/hooks/useAutoFix";
 import { useFormattedOutput } from "@/hooks/useFormattedOutput";
 import { cn } from "@/lib/utils";
 import { rememberFormat, useWorkbench } from "@/state/WorkbenchContext";
@@ -31,6 +32,8 @@ export function Workbench({ formatId, children }: { formatId: FormatId; children
   const formatSettings = settings[formatId];
   const state = useFormattedOutput(formatId, input, formatSettings);
   const [outputExpanded, setOutputExpanded] = useState(false);
+  // Offered under a syntax error for formats with a repairer; a fix replaces the input (undo with Ctrl+Z).
+  const autoFix = useAutoFix(formatId, input, formatSettings, (text) => setInput(formatId, text));
   const router = useRouter();
   // Set when text for another format is pasted into an empty input. It only stands while the input
   // still holds exactly that text, so replacing the text can never move something else by mistake.
@@ -113,6 +116,7 @@ export function Workbench({ formatId, children }: { formatId: FormatId; children
             <OutputPane
               format={format}
               state={state}
+              fix={autoFix}
               expanded={outputExpanded}
               onToggleExpand={() => setOutputExpanded((expanded) => !expanded)}
             />

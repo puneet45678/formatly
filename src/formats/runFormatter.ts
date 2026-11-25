@@ -1,6 +1,7 @@
 import { formatInput } from "./formatInput";
 import { getFormat } from "./registry";
-import type { FormatId, FormatOutcome, FormatSettings } from "./types";
+import { repairInput } from "./repairInput";
+import type { FormatId, FormatOutcome, FormatSettings, RepairOutcome } from "./types";
 import { createWorkerClient } from "./workerClient";
 import type { WorkerLike } from "./workerClient";
 
@@ -24,4 +25,16 @@ export async function runFormatter(id: FormatId, input: string, settings: Format
     return workerClient.run(id, input, settings);
   }
   return formatInput(id, input, settings);
+}
+
+/**
+ * The single place where an automatic fix runs, the counterpart of runFormatter.
+ * Fixes run where the format runs: in the worker for text formats, because a
+ * fix with many mistakes to correct can take seconds on a large input.
+ */
+export async function runRepair(id: FormatId, input: string, settings: FormatSettings): Promise<RepairOutcome> {
+  if (getFormat(id).runsOn === "worker" && typeof Worker !== "undefined") {
+    return workerClient.run(id, input, settings, "repair");
+  }
+  return repairInput(id, input, settings);
 }

@@ -5,6 +5,7 @@ import { Maximize2, Minimize2 } from "lucide-react";
 import { FORMATS, type RegisteredFormat } from "@/formats/registry";
 import type { FormatError, FormatId } from "@/formats/types";
 import type { OutputState } from "@/hooks/useFormattedOutput";
+import type { AutoFix } from "@/hooks/useAutoFix";
 import { cn } from "@/lib/utils";
 import { CodeEditor } from "./CodeEditor";
 import { DiagramView } from "./DiagramView";
@@ -14,6 +15,8 @@ import { OutputActions } from "./OutputActions";
 interface OutputPaneProps {
   format: RegisteredFormat;
   state: OutputState;
+  /** The automatic fix, for formats that have one. */
+  fix?: AutoFix;
   /** Output fills the workspace and the input is hidden. */
   expanded?: boolean;
   onToggleExpand?: () => void;
@@ -57,7 +60,7 @@ export function describeError(error: FormatError): string {
   return `${where}: ${error.message}`;
 }
 
-export function OutputPane({ format, state, expanded = false, onToggleExpand }: OutputPaneProps) {
+export function OutputPane({ format, state, fix, expanded = false, onToggleExpand }: OutputPaneProps) {
   const [view, setView] = useState<OutputView>("preview");
   const hasPreview = LAZY_PREVIEWS[format.id] !== undefined;
   const ExpandIcon = expanded ? Minimize2 : Maximize2;
@@ -111,18 +114,19 @@ export function OutputPane({ format, state, expanded = false, onToggleExpand }: 
           )}
         </div>
       </div>
+      {fix?.state.status === "fixed" && state.status === "ok" && <FixedNote />}
       {/* The previous result stays readable while the next one formats, dimmed so it isn't taken as current. */}
       <div
         className={cn("flex min-h-0 flex-1 flex-col transition-opacity", state.pending && state.status !== "empty" && "opacity-50")}
         aria-busy={state.pending ?? false}
       >
-        <OutputBody format={format} state={state} view={view} />
+        <OutputBody format={format} state={state} view={view} fix={fix} />
       </div>
     </section>
   );
 }
 
-function OutputBody({ format, state, view }: OutputPaneProps & { view: OutputView }) {
+function OutputBody({ format, state, view, fix }: OutputPaneProps & { view: OutputView }) {
   switch (state.status) {
     case "empty":
       return (
@@ -130,9 +134,10 @@ function OutputBody({ format, state, view }: OutputPaneProps & { view: OutputVie
       );
     case "invalid":
       return (
-        <p aria-live="polite" className="p-3.5 font-mono text-xs text-err">
-          {describeError(state.error)}
-        </p>
+        <div aria-live="polite" className="flex flex-col items-start gap-2.5 p-3.5">
+          <p className="font-mono text-xs text-err">{describeError(state.error)}</p>
+          {fix && <FixOffer fix={fix} />}
+        </div>
       );
     case "failed":
       // Not a problem at any line of the input, so no "Line N" and no red.
@@ -160,4 +165,26 @@ function OutputBody({ format, state, view }: OutputPaneProps & { view: OutputVie
       );
     }
   }
+}
+
+/** Under a syntax error: the button that fixes it, its progress, or why it couldn't. */
+function FixOffer({ fix }: { fix: AutoFix }) {
+  if (fix.state.status === "unfixable") {
+    return <p className="text-xs text-muted">{`Couldn't fix it automatically: ${fix.state.message}`}</p>;
+  }
+  const fixing = fix.state.status === "fixing";
+  return (
+    <button type="button" className="chip" onClick={fix.run} disabled={fixing}>
+      {fixing ? "Fixing…" : "Fix automatically"}
+    </button>
+  );
+}
+
+/** After a fix: says what happened and how to take it back. */
+export function FixedNote() {
+  return (
+    <p role="status" className="border-b border-line px-3.5 py-1.5 text-[11.5px] text-muted">
+      Fixed automatically. Undo with ⌘Z / Ctrl+Z in the input.
+    </p>
+  );
 }

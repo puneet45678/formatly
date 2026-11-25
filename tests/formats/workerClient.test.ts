@@ -50,7 +50,7 @@ describe("createWorkerClient", () => {
     const client = createWorkerClient(spawn);
     const promise = client.run("json", '{"a":1}', { indent: "2" });
 
-    expect(workers[0].posted).toEqual([{ id: expect.any(Number), format: "json", input: '{"a":1}', settings: { indent: "2" } }]);
+    expect(workers[0].posted).toEqual([{ id: expect.any(Number), op: "format", format: "json", input: '{"a":1}', settings: { indent: "2" } }]);
     workers[0].respond(workers[0].posted[0].id, ok("done"));
 
     await expect(promise).resolves.toEqual(ok("done"));
@@ -207,5 +207,21 @@ describe("createWorkerClient", () => {
     const promise = client.run("json", "{", {});
     workers[0].respond(workers[0].posted[0].id, invalid("Expected }"));
     await expect(promise).resolves.toEqual(invalid("Expected }"));
+  });
+
+  it("sends a repair to the worker and resolves with its outcome", async () => {
+    const client = createWorkerClient(spawn);
+    const promise = client.run("json", "{'a':1}", {}, "repair");
+    expect(workers[0].posted[0]).toMatchObject({ op: "repair", format: "json", input: "{'a':1}" });
+    workers[0].onmessage?.({ data: { id: workers[0].posted[0].id, result: { kind: "repaired", output: '{"a":1}' } } });
+    await expect(promise).resolves.toEqual({ kind: "repaired", output: '{"a":1}' });
+  });
+
+  it("cancels a long fix when a new request arrives (the text it was fixing changed)", async () => {
+    const client = createWorkerClient(spawn);
+    const fix = client.run("json", "{'a':1}", {}, "repair");
+    vi.advanceTimersByTime(SUPERSEDE_AFTER_MS);
+    client.run("json", "{'a':12}", {});
+    await expect(fix).resolves.toEqual({ kind: "cancelled" });
   });
 });

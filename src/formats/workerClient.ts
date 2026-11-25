@@ -1,7 +1,10 @@
-import type { FormatId, FormatOutcome, FormatSettings } from "./types";
+import type { FormatId, FormatOutcome, FormatSettings, RepairOutcome } from "./types";
 
-export type WorkerRequest = { id: number; format: FormatId; input: string; settings: FormatSettings };
-export type WorkerResponse = { id: number; result: FormatOutcome };
+/** What the worker is asked to do: format the input, or fix its mistakes. */
+export type WorkerOp = "format" | "repair";
+export type WorkerRequest = { id: number; op: WorkerOp; format: FormatId; input: string; settings: FormatSettings };
+type WorkerResult = FormatOutcome | RepairOutcome;
+export type WorkerResponse = { id: number; result: WorkerResult };
 
 /** The slice of a Web Worker the client uses, so tests can pass a fake. */
 export interface WorkerLike {
@@ -30,12 +33,13 @@ export const SUPERSEDE_AFTER_MS = 50;
 /** A job that takes longer than this is given up on. */
 export const TIMEOUT_MS = 15_000;
 
-const CANCELLED: FormatOutcome = { kind: "cancelled" };
-const TIMED_OUT: FormatOutcome = { kind: "failed", reason: "timeout", message: "Formatting took too long (over 15 seconds)" };
-const CRASHED: FormatOutcome = { kind: "failed", reason: "crashed", message: "The formatter stopped unexpectedly" };
+// Valid as either outcome: both kinds have "failed" and "cancelled".
+const CANCELLED = { kind: "cancelled" } as const;
+const TIMED_OUT = { kind: "failed", reason: "timeout", message: "Formatting took too long (over 15 seconds)" } as const;
+const CRASHED = { kind: "failed", reason: "crashed", message: "The formatter stopped unexpectedly" } as const;
 
 type PendingJob = {
-  resolve: (result: FormatOutcome) => void;
+  resolve: (result: WorkerResult) => void;
   startedAt: number;
   timer: ReturnType<typeof setTimeout>;
 };
@@ -60,7 +64,7 @@ export function createWorkerClient(spawn: () => WorkerLike) {
   const pending = new Map<number, PendingJob>();
 
   /** Resolves every waiting job with `result`. */
-  function settleAll(result: FormatOutcome) {
+  function settleAll(result: WorkerResult) {
     for (const job of pending.values()) {
       clearTimeout(job.timer);
       job.resolve(result);
@@ -69,7 +73,7 @@ export function createWorkerClient(spawn: () => WorkerLike) {
   }
 
   /** Throws the current worker away (a new one is spawned on the next request) and settles all waiting jobs. */
-  function discardWorker(result: FormatOutcome) {
+  function discardWorker(result: WorkerResult) {
     const old = worker;
     worker = null;
     old?.terminate();
@@ -96,22 +100,9 @@ export function createWorkerClient(spawn: () => WorkerLike) {
   }
 
   return {
-    run(format: FormatId, input: string, settings: FormatSettings): Promise<FormatOutcome> {
-      // An earlier job still running after a while is likely a big input the user
-      // has moved past. Drop it rather than queue behind it (see SUPERSEDE_AFTER_MS).
-      const now = Date.now();
-      const busy = [...pending.values()].some((job) => now - job.startedAt >= SUPERSEDE_AFTER_MS);
-      if (busy) discardWorker(CANCELLED);
-
-      const id = nextId++;
-      return new Promise<FormatOutcome>((resolve) => {
-        const timer = setTimeout(() => {
-          // We can't stop one job inside a worker, so a stuck job means replacing the worker.
-          discardWorker(TIMED_OUT);
-        }, TIMEOUT_MS);
-        pending.set(id, { resolve, startedAt: now, timer });
-        getWorker().postMessage({ id, format, input, settings });
-      });
+    run: run as {
+      (format: FormatId, input: string, settings: FormatSettings): Promise<FormatOutcome>;
+      (format: FormatId, input: string, settings: FormatSettings, op: "repair"): Promise<RepairOutcome>;
     },
 
     /** Stops the worker. Jobs still waiting resolve as cancelled. */
@@ -119,4 +110,24 @@ export function createWorkerClient(spawn: () => WorkerLike) {
       discardWorker(CANCELLED);
     },
   };
+
+  function run(format: FormatId, input: string, settings: FormatSettings, op: WorkerOp = "format"): Promise<WorkerResult> {
+    // An earlier job still running after a while is likely a big input the user
+    // has moved past. Drop it rather than queue behind it (see SUPERSEDE_AFTER_MS).
+    // A fix in progress is dropped the same way when the user types: the text it
+    // was fixing has changed.
+    const now = Date.now();
+    const busy = [...pending.values()].some((job) => now - job.startedAt >= SUPERSEDE_AFTER_MS);
+    if (busy) discardWorker(CANCELLED);
+
+    const id = nextId++;
+    return new Promise<WorkerResult>((resolve) => {
+      const timer = setTimeout(() => {
+        // We can't stop one job inside a worker, so a stuck job means replacing the worker.
+        discardWorker(TIMED_OUT);
+      }, TIMEOUT_MS);
+      pending.set(id, { resolve, startedAt: now, timer });
+      getWorker().postMessage({ id, op, format, input, settings });
+    });
+  }
 }

@@ -30,4 +30,5 @@ export const json = {
   },
   detect: detectJson,
   load: () => import("../formatters/json").then((m) => m.formatJson),
+  repair: () => import("../repairers/json").then((m) => m.repairJson),
 } as const satisfies FormatDefinition;
