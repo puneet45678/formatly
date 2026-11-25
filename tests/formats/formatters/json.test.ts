@@ -32,6 +32,30 @@ describe("formatJson", () => {
       error: { message: "Trailing commas aren't allowed in JSON", line: 1, column: 6 },
     }));
 
+  it("names a trailing comma in an object", () =>
+    expect(formatJson('{"a": 1,}')).toEqual({
+      ok: false,
+      error: { message: "Trailing commas aren't allowed in JSON", line: 1, column: 9 },
+    }));
+
+  it("names a trailing comma in a nested object", () =>
+    expect(formatJson('[1,{"a":{"b":1,},"c":2}]')).toMatchObject({
+      ok: false,
+      error: { message: "Trailing commas aren't allowed in JSON" },
+    }));
+
+  it("still says unquoted key for an unquoted key", () =>
+    expect(formatJson("{a:1}")).toMatchObject({
+      ok: false,
+      error: { message: "Property names must be in double quotes", column: 2 },
+    }));
+
+  it("does not call a missing key after a comma a trailing comma", () => {
+    const result = formatJson('{"a":1,,"b":2}');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error.message).not.toMatch(/trailing/i);
+  });
+
   it("rejects comments", () =>
     expect(formatJson('{"a":1 // hi\n}')).toEqual({
       ok: false,

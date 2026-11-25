@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Polish options</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#050505;color:#ededed;font-family:Inter,system-ui,sans-serif;padding:32px 20px 80px}
+  .page{max-width:1100px;margin:0 auto}
+  h1{font-size:22px;font-weight:600}
+  .intro{color:#8f8f8f;font-size:14px;margin-top:6px;line-height:1.55}
+  .block{margin-top:44px}
+  .bh{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .tag{font:600 12px Inter;background:#1f1f1f;border:1px solid #333;border-radius:6px;padding:2px 8px}
+  .bh h2{font-size:15px;font-weight:600}
+  .bh span.d{color:#8f8f8f;font-size:13px}
+  .note{color:#8f8f8f;font-size:12.5px;margin-top:10px;line-height:1.55}
+  code{font:12px 'JetBrains Mono',monospace;color:#cfcfcf}
+
+  .app{position:relative;border:1px solid #232323;border-radius:14px;overflow:hidden;background:#0a0a0a;padding:14px;
+    background-image:linear-gradient(to right,rgba(255,255,255,.055) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.055) 1px,transparent 1px);background-size:44px 44px}
+  .pane{background:rgba(17,17,17,.9);border:1px solid #232323;border-radius:10px;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+  .ph{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid #232323;font-size:11.5px;color:#8f8f8f;white-space:nowrap}
+  .ph b{color:#ededed;font-weight:500}
+  .chip{font:500 11px Inter;border:1px solid #232323;border-radius:6px;padding:3px 8px;color:#8f8f8f;background:none;cursor:pointer}
+  .chip:hover{color:#ededed}
+  .chip.on{background:#1c1c1c;color:#ededed}
+  .iconbtn{display:inline-grid;place-items:center;width:22px;height:22px;border:1px solid #232323;border-radius:6px;color:#8f8f8f;background:none;cursor:pointer;font:600 11px 'JetBrains Mono'}
+  .iconbtn:hover{color:#ededed}
+  .code{flex:1;font:12px/1.65 'JetBrains Mono',monospace;padding:10px 12px;white-space:pre-wrap;word-break:break-word;color:#cfcfcf;overflow:hidden}
+  .k{color:#7dd3fc}.s{color:#a7f3d0}.n{color:#fcd34d}.p{color:#6b7280}
+  .ok{color:#4ade80;font-size:11px}
+
+  /* 1: split */
+  .split{display:flex;height:250px;gap:0}
+  .split .in{flex:0 0 var(--w,50%);min-width:0}
+  .split .out{flex:1;min-width:0}
+  .div{flex:0 0 12px;position:relative;cursor:col-resize;touch-action:none;outline:none;display:grid;place-items:center}
+  .div::after{content:"";width:3px;height:36px;border-radius:2px;background:#2e2e2e;transition:background .15s,height .15s}
+  .div:hover::after,.div:focus-visible::after,.div.drag::after{background:#7dd3fc;height:60px}
+  .rail{flex:0 0 44px;border:1px solid #232323;border-radius:10px;background:rgba(17,17,17,.9);display:flex;flex-direction:column;align-items:center;padding:8px 0;gap:10px}
+  .rail .v{writing-mode:vertical-rl;font-size:11px;color:#8f8f8f;letter-spacing:.04em}
+  .hide{display:none!important}
+  .state{font:11px 'JetBrains Mono';color:#5c5c5c;margin-top:8px}
+
+  /* 2: expand */
+  .pair{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .frame{position:relative;height:200px;border:1px solid #232323;border-radius:10px;overflow:hidden;background:#0a0a0a}
+  .frame .bar{height:22px;border-bottom:1px solid #1a1a1a;display:flex;align-items:center;padding:0 8px;font:600 9px 'JetBrains Mono';color:#7dd3fc}
+  .frame .area{position:absolute;inset:22px 0 0 0;padding:10px}
+  .frame .cap{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:26px;height:120px;border-radius:13px;background:#111;border:1px solid #2e2e2e;display:grid;gap:4px;padding:6px 0;place-items:center;font:700 8px 'JetBrains Mono';color:#8f8f8f}
+  .frame .full{height:100%;border:1px solid #232323;border-radius:8px;background:rgba(17,17,17,.9);padding:8px;font:10px/1.5 'JetBrains Mono';color:#8f8f8f}
+  .frame .full i{display:block;height:6px;border-radius:3px;background:#1f1f1f;margin:6px 0}
+  .measure{position:absolute;bottom:6px;left:0;right:0;display:flex;justify-content:space-between;padding:0 10px;font:600 9px 'JetBrains Mono';color:#fcd34d}
+  .lab{font-size:12px;color:#8f8f8f;margin-bottom:6px}
+  .lab b{color:#ededed;font-weight:600}
+
+  /* 3: about */
+  .tabs{display:flex;gap:4px;margin-bottom:10px}
+  .tabs button{font:500 11px 'JetBrains Mono';color:#8f8f8f;background:#111;border:1px solid #262626;border-radius:999px;padding:5px 11px;cursor:pointer}
+  .tabs button.on{background:#ededed;color:#0a0a0a;border-color:#ededed}
+  .page-frame{border:1px solid #232323;border-radius:14px;background:#0a0a0a;overflow:hidden}
+  .tool-strip{height:130px;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;opacity:.8;border-bottom:1px dashed #2a2a2a;position:relative}
+  .tool-strip::after{content:"the tool: fills the first screen, same as today";position:absolute;right:12px;bottom:6px;font:10px 'JetBrains Mono';color:#5c5c5c}
+  .fold{text-align:center;font:10px 'JetBrains Mono';color:#5c5c5c;padding:6px;border-bottom:1px solid #151515}
+  .about{padding:28px 28px 36px;color:#bdbdbd;font-size:13.5px;line-height:1.65}
+  .about h3{font-size:20px;font-weight:600;color:#ededed;letter-spacing:-.01em}
+  .about .lead{margin-top:8px;max-width:62ch;color:#a3a3a3}
+  .about h4{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:#7dd3fc;font-weight:600;margin:24px 0 10px}
+  .about ul{list-style:none;display:grid;gap:8px}
+  .about li{padding-left:18px;position:relative}
+  .about li::before{content:"";position:absolute;left:2px;top:.62em;width:6px;height:6px;border-radius:2px;background:#7dd3fc}
+  .about li b{color:#ededed;font-weight:500}
+  .faq details{border-top:1px solid #1d1d1d;padding:11px 0}
+  .faq details:last-child{border-bottom:1px solid #1d1d1d}
+  .faq summary{cursor:pointer;color:#ededed;font-weight:500;list-style:none;display:flex;justify-content:space-between;gap:12px}
+  .faq summary::after{content:"+";color:#7dd3fc;font-family:'JetBrains Mono'}
+  .faq details[open] summary::after{content:"–"}
+  .faq p{margin-top:8px;max-width:64ch;color:#a3a3a3}
+  .A .about{max-width:760px;margin:0 auto}
+  .B .about{display:grid;grid-template-columns:1fr 1fr;gap:36px}
+  .B .about h4{margin-top:0}
+
+  /* 4: markdown colours */
+  .md2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .md .code{padding:12px 14px}
+  .md .h{font-weight:700}
+  .md-now .h{color:#7dd3fc;font-weight:400}
+  .md-now .mk,.md-now .em,.md-now .st,.md-now .ln,.md-now .ic,.md-now .qt{color:#cfcfcf}
+  .md-new .h{color:#7dd3fc;font-weight:700}
+  .md-new .mk{color:#4b5563}
+  .md-new .st{color:#ededed;font-weight:700}
+  .md-new .em{color:#cfcfcf;font-style:italic}
+  .md-new .ln{color:#7dd3fc}
+  .md-new .ic{color:#7dd3fc}
+  .md-new .qt{color:#8f8f8f;font-style:italic}
+  .prev{padding:14px 18px;font-size:13px;line-height:1.7;color:#cfcfcf;flex:1}
+  .prev h1{font-size:20px;color:#ededed;margin-bottom:8px;letter-spacing:-.01em}
+  .prev p{margin:6px 0}
+  .prev ul{margin:6px 0 6px 18px}
+  .prev li::marker{color:#7dd3fc}
+  .prev blockquote{border-left:2px solid #7dd3fc;padding-left:12px;color:#8f8f8f;margin:8px 0}
+  .prev code{background:#161616;border:1px solid #222;border-radius:4px;padding:1px 5px;color:#7dd3fc}
+  .prev a{color:#7dd3fc;text-decoration:underline;text-underline-offset:2px}
+
+  /* 5: intro above the panes */
+  .opt{margin-top:18px}
+  .opt .lab{margin-bottom:8px}
+  .mini{padding:12px;border:1px solid #232323;border-radius:14px;background:#0a0a0a;background-image:linear-gradient(to right,rgba(255,255,255,.04) 1px,transparent 1px),linear-gradient(to bottom,rgba(255,255,255,.04) 1px,transparent 1px);background-size:44px 44px}
+  .mini .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .mini .pane .code{height:90px;flex:none}
+  .intro .small{display:none}
+  .intro.packed .big{display:none}
+  .intro.packed .small{display:flex}
+  .big{overflow:hidden}
+  .line1{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:0 2px 10px;font-size:12.5px;color:#8f8f8f}
+  .line1 span:first-child{color:#ededed;font-weight:500}
+  .line1 .dot{color:#3f3f3f}
+  .icons{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .icons span{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:#bdbdbd;border:1px solid #232323;background:rgba(17,17,17,.9);border-radius:999px;padding:5px 11px}
+  .icons svg{color:#7dd3fc}
+  .icons.c{justify-content:center}
+  .hero2{display:grid;grid-template-columns:1.15fr .85fr;gap:22px;align-items:center;padding:8px 6px 18px}
+  .hero2 h2,.hero3 h2{font-size:28px;line-height:1.12;font-weight:650;letter-spacing:-.028em}
+  .hero2 h2 em{font-style:normal;background:linear-gradient(90deg,#7dd3fc,#a7f3d0);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero2 p,.hero3 p{color:#8f8f8f;font-size:13.5px;margin-top:9px;max-width:56ch;line-height:1.55}
+  .demo{border:1px solid #232323;background:rgba(17,17,17,.92);border-radius:12px;padding:10px 12px;display:grid;gap:6px;font:11.5px/1.5 'JetBrains Mono',monospace;min-height:128px}
+  .demo i{display:block;font:600 9px Inter;letter-spacing:.09em;text-transform:uppercase;color:#5c5c5c;margin-bottom:2px}
+  .demo code{display:block;white-space:pre;color:#6b7280;min-height:1.5em;font:inherit}
+  .demo .arr{color:#7dd3fc;text-align:center;line-height:1}
+  .demo .caret{display:inline-block;width:6px;height:12px;background:#7dd3fc;vertical-align:-2px;animation:bl 1s steps(1) infinite}
+  @keyframes bl{50%{opacity:0}}
+  .hero3{text-align:center;padding:14px 6px 20px}
+  .hero3 p{margin-left:auto;margin-right:auto}
+  .glyphs{display:flex;justify-content:center;gap:8px;margin-top:14px;flex-wrap:wrap}
+  .glyphs span{font:600 11px 'JetBrains Mono';color:#8f8f8f;border:1px solid #2a2a2a;background:#101010;border-radius:999px;padding:5px 12px}
+  @media (max-width:760px){.pair,.md2,.B .about,.hero2{grid-template-columns:1fr}.demo{display:none}}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}.caret{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+  <h1>Polish: four things to choose</h1>
+  <p class="intro">Everything here is live. Drag, click and toggle. Tell me which variant you want for each block (or "as shown") and I will build it.</p>
+
+  <!-- 1 -->
+  <section class="block">
+    <div class="bh"><span class="tag">1</span><h2>Adjustable and collapsible input</h2><span class="d">Drag the divider. Arrow keys nudge (Shift = bigger). Double-click resets to 50/50. Drag past the minimum, or press the « button, to collapse.</span></div>
+    <div class="app">
+      <div class="split" id="split">
+        <section class="pane in" id="in">
+          <div class="ph"><span><b>Input</b> &nbsp;JSON</span><span><button class="iconbtn" id="collapse" title="Collapse input">«</button></span></div>
+          <div class="code"><span class="p">{"name":"formatly","tags":["json","yaml"],"private":true,"max":12345678901234567890}</span></div>
+        </section>
+        <div class="div" id="div" role="separator" aria-orientation="vertical" tabindex="0" aria-label="Resize input"></div>
+        <aside class="rail hide" id="rail"><button class="iconbtn" id="expandIn" title="Expand input">»</button><span class="v">Input</span></aside>
+        <section class="pane out" id="out">
+          <div class="ph"><span><b>Output</b></span><span class="ok">Valid</span></div>
+          <div class="code"><span class="p">{</span>
+  <span class="k">"name"</span><span class="p">:</span> <span class="s">"formatly"</span><span class="p">,</span>
+  <span class="k">"tags"</span><span class="p">: [</span><span class="s">"json"</span><span class="p">,</span> <span class="s">"yaml"</span><span class="p">],</span>
+  <span class="k">"private"</span><span class="p">:</span> <span class="n">true</span><span class="p">,</span>
+  <span class="k">"max"</span><span class="p">:</span> <span class="n">12345678901234567890</span>
+<span class="p">}</span></div>
+        </section>
+      </div>
+    </div>
+    <div class="state" id="state"></div>
+    <p class="note">Minimum width per side is 240px. Your layout is remembered. On phones the two panes stay stacked and there is no divider.</p>
+  </section>
+
+  <!-- 2 -->
+  <section class="block">
+    <div class="bh"><span class="tag">2</span><h2>Expanded output covers the full width</h2><span class="d">Left is how it behaves today, right is the proposal: the format capsule hides while expanded, and both sides get the same margin.</span></div>
+    <div class="pair">
+      <div><div class="lab"><b>Today</b> – capsule space stays reserved</div>
+        <div class="frame"><div class="bar">{ } formatly</div><div class="cap"><span>{ }</span><span>---</span><span>-&gt;</span><span>&lt;/&gt;</span></div>
+          <div class="area" style="padding-left:44px"><div class="full">Output<i style="width:80%"></i><i style="width:60%"></i><i style="width:70%"></i></div></div>
+          <div class="measure"><span>← 84px empty</span><span>18px →</span></div></div></div>
+      <div><div class="lab"><b>Proposed</b> – full width, capsule returns when you exit</div>
+        <div class="frame"><div class="bar">{ } formatly</div>
+          <div class="area"><div class="full">Output<i style="width:80%"></i><i style="width:60%"></i><i style="width:70%"></i></div></div>
+          <div class="measure"><span>← 18px</span><span>18px →</span></div></div></div>
+    </div>
+    <p class="note">The top bar stays so you can still leave. Esc and the shrink button also exit. For Mermaid the diagram keeps its zoom; use Fit after expanding to re-centre it.</p>
+  </section>
+
+  <!-- 3 -->
+  <section class="block">
+    <div class="bh"><span class="tag">3</span><h2>One shared text below every tool</h2><span class="d">Same text on every format page, about the site and not the tool. It sits under the tool, out of the way until you scroll. Pick a layout.</span></div>
+    <div class="tabs" id="aboutTabs"><button data-l="A" id="layA" class="on">Layout A: one column</button><button data-l="B" id="layB">Layout B: two columns</button></div>
+    <div class="page-frame A" id="pf">
+      <div class="tool-strip"><div class="pane"></div><div class="pane"></div></div>
+      <div class="fold">↓ scroll for more</div>
+      <div id="aboutHost"></div>
+    </div>
+    <p class="note">Every sentence is backed by something the app really does. "Remembered" means settings and layout only; pasted text is never stored. Two claims from your sample are left out because they are not true yet: a Content Security Policy, and a size limit for Mermaid.</p>
+  </section>
+
+  <!-- 4 -->
+  <section class="block">
+    <div class="bh"><span class="tag">4</span><h2>Markdown colours</h2><span class="d">One accent (the site blue) plus weight and style, with the symbols dimmed.</span></div>
+    <div class="md2">
+      <div class="md md-now"><div class="lab"><b>Today</b> – only the # lines are tinted</div><section class="pane"><div class="ph"><b>Source</b></div><div class="code" id="mdNow"></div></section></div>
+      <div class="md md-new"><div class="lab"><b>Proposed</b> – source view</div><section class="pane"><div class="ph"><b>Source</b></div><div class="code" id="mdNew"></div></section></div>
+    </div>
+    <div class="lab" style="margin-top:14px"><b>Proposed</b> – preview gets the same blue on bullets, quote bar, inline code and links</div>
+    <section class="pane"><div class="ph"><b>Preview</b></div>
+      <div class="prev"><h1>Release notes</h1><p>This build is <strong>faster</strong> and <em>quieter</em>. See the <a href="#">changelog</a>.</p><ul><li>Run <code>npm test</code> before pushing</li><li>Big pastes no longer freeze the page</li></ul><blockquote>Nothing you paste leaves the browser.</blockquote></div></section>
+  </section>
+
+  <!-- 5 -->
+  <section class="block">
+    <div class="bh"><span class="tag">5</span><h2>An intro above the panes, improved</h2><span class="d">Same on every format page, no buttons. Two improved takes on the headline strip. Both shrink to one line once you paste, so the tool gets the room.</span></div>
+    <div class="tabs" style="margin-top:6px"><button class="on" id="simEmpty">Empty page (first visit)</button><button id="simFull">After pasting</button></div>
+
+    <div class="opt"><div class="lab"><b>5a. Headline with a live demo</b> – the right side shows messy text turning tidy, on a loop</div>
+      <div class="mini intro" data-intro>
+        <div class="big hero2"><div class="h2l"><h2>Paste anything.<br><em>Get it formatted.</em></h2><p>JSON, YAML, Mermaid, XML, SQL and Markdown, tidied as you type, with errors that point at the exact line.</p>
+          <div class="icons"><span><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Nothing is uploaded</span><span><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Exact line and column</span><span><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Handles big pastes</span></div></div>
+          <div class="demo" aria-hidden="true"><div class="dl"><i>before</i><code id="demoIn"></code></div><div class="arr">↓</div><div class="dl"><i>after</i><code id="demoOut"></code></div></div></div>
+        <div class="small line1"><span>Paste. Format. Done.</span><span class="dot">·</span><span>Runs entirely in your browser, nothing is uploaded.</span></div>
+        <div class="two"><section class="pane"><div class="ph"><b>Input</b></div><div class="code"><span class="p" data-in>{"a":1,"b":[2,3]}</span></div></section><section class="pane"><div class="ph"><b>Output</b><span class="ok">Valid</span></div><div class="code"><span class="p">{</span>
+  <span class="k">"a"</span><span class="p">:</span> <span class="n">1</span><span class="p">,</span>
+  <span class="k">"b"</span><span class="p">: [</span><span class="n">2</span><span class="p">,</span> <span class="n">3</span><span class="p">]</span>
+<span class="p">}</span></div></section></div></div></div>
+
+    <div class="opt"><div class="lab"><b>5b. Centered, with the six formats</b> – a calm headline, the six symbols as a row, three facts underneath</div>
+      <div class="mini intro" data-intro>
+        <div class="big hero3"><h2>Format anything you paste.</h2><p>Privately, in your browser. Nothing is uploaded, and there is nothing to sign up for.</p>
+          <div class="glyphs"><span>{ }</span><span>---</span><span>-&gt;</span><span>&lt;/&gt;</span><span>SQL</span><span>#</span></div>
+          <div class="icons c"><span><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="11" width="16" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>Private</span><span><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Exact errors</span><span><svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg>Fast on big pastes</span></div></div>
+        <div class="small line1"><span>Paste. Format. Done.</span><span class="dot">·</span><span>Runs entirely in your browser, nothing is uploaded.</span></div>
+        <div class="two"><section class="pane"><div class="ph"><b>Input</b></div><div class="code"><span class="p" data-in>{"a":1,"b":[2,3]}</span></div></section><section class="pane"><div class="ph"><b>Output</b><span class="ok">Valid</span></div><div class="code"><span class="p">{</span>
+  <span class="k">"a"</span><span class="p">:</span> <span class="n">1</span><span class="p">,</span>
+  <span class="k">"b"</span><span class="p">: [</span><span class="n">2</span><span class="p">,</span> <span class="n">3</span><span class="p">]</span>
+<span class="p">}</span></div></section></div></div></div>
+    <p class="note">The top bar already types "format your json", so neither repeats it. Heights: 5a about 150px (stacks on phones with the demo hidden), 5b about 130px, and both collapse to a 28px line after pasting. The collapse is automatic: the intro returns whenever the input is empty. Everything stated is true today.</p>
+  </section>
+</div>
+
+<script>
+/* 1: split view */
+(function(){
+  const split=document.getElementById('split'),inn=document.getElementById('in'),div=document.getElementById('div'),
+    rail=document.getElementById('rail'),out=document.getElementById('out'),state=document.getElementById('state');
+  const MIN=240,DIV=12,RAIL=44;let frac=.5,collapsed=false;
+  const avail=()=>split.clientWidth-DIV;
+  function apply(){
+    if(collapsed){inn.classList.add('hide');div.classList.add('hide');rail.classList.remove('hide');state.textContent='input collapsed (rail 44px)';return}
+    inn.classList.remove('hide');div.classList.remove('hide');rail.classList.add('hide');
+    inn.style.setProperty('--w',Math.round(frac*avail())+'px');
+    state.textContent='input '+Math.round(frac*100)+'% / output '+Math.round((1-frac)*100)+'%';
+  }
+  const clamp=f=>Math.min(1-MIN/avail(),Math.max(MIN/avail(),f));
+  let drag=false;
+  div.addEventListener('pointerdown',e=>{drag=true;div.setPointerCapture(e.pointerId);div.classList.add('drag')});
+  div.addEventListener('pointermove',e=>{if(!drag)return;const x=e.clientX-split.getBoundingClientRect().left;
+    if(x<MIN-60){collapsed=true;drag=false;div.classList.remove('drag');apply();return}
+    frac=clamp(x/avail());apply()});
+  div.addEventListener('pointerup',()=>{drag=false;div.classList.remove('drag')});
+  div.addEventListener('dblclick',()=>{frac=.5;apply()});
+  div.addEventListener('keydown',e=>{const s=e.shiftKey?.1:.02;
+    if(e.key==='ArrowLeft'){frac=clamp(frac-s);apply();e.preventDefault()}
+    if(e.key==='ArrowRight'){frac=clamp(frac+s);apply();e.preventDefault()}
+    if(e.key==='Home'){frac=clamp(0);apply();e.preventDefault()}
+    if(e.key==='End'){frac=clamp(1);apply();e.preventDefault()}
+    if(e.key==='Enter'||e.key===' '){collapsed=true;apply();e.preventDefault()}});
+  document.getElementById('collapse').onclick=()=>{collapsed=true;apply()};
+  document.getElementById('expandIn').onclick=()=>{collapsed=false;apply()};
+  window.addEventListener('resize',apply);apply();
+})();
+
+/* 3: about */
+(function(){
+  const faq=(q,a)=>`<details><summary>${q}</summary><p>${a}</p></details>`;
+  const d={title:'A private formatter for the formats you paste every day',
+    lead:'Paste JSON, YAML, Mermaid, XML, SQL or Markdown on the left and get it tidied on the right as you type. Errors name the line and column. It formats and checks; it never converts one format into another.',
+    feats:['<b>Six formats in one place</b>, each with its own page and its own remembered settings','<b>Clear errors</b> that point at the line and highlight it in the input','<b>Copy or download</b> the result, with the right file type for each format','<b>Built for big pastes</b>: formatting runs off the main thread, so the page keeps responding','<b>Extras where they help</b>: zoom and pan for Mermaid diagrams, a rendered preview for Markdown, and a dialect picker for SQL'],
+    faq:[faq('Is my data sent to a server?','No. Formatting runs in your browser on your own device. What you paste is kept in memory only, never uploaded or saved.'),
+      faq('Can it convert JSON to YAML, or other formats?','No, on purpose. Each page formats one format and keeps it that format.'),
+      faq('What happens with invalid input?','You get an error with the line and column instead of a half-formatted result. JSON is checked strictly, so comments and trailing commas are reported.'),
+      faq('Is anything remembered between visits?','Your settings (like the SQL dialect) and the layout are remembered in your browser. The text you paste is not.')]};
+  const host=document.getElementById('aboutHost');
+  host.innerHTML=`<div class="about"><div><h3>${d.title}</h3><p class="lead">${d.lead}</p><h4>What it does</h4><ul>${d.feats.map(f=>'<li>'+f+'</li>').join('')}</ul></div><div class="faq"><h4>Questions</h4>${d.faq.join('')}</div></div>`;
+  const pf=document.getElementById('pf'),la=document.getElementById('layA'),lb=document.getElementById('layB');
+  la.onclick=()=>{pf.className='page-frame A';la.classList.add('on');lb.classList.remove('on')};
+  lb.onclick=()=>{pf.className='page-frame B';lb.classList.add('on');la.classList.remove('on')};
+})();
+
+/* 4: markdown */
+(function(){
+  const esc=s=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;');
+  const lines=[
+    ['h','# Release notes'],['','This build is '],
+  ];
+  function build(){
+    return `<span class="h"><span class="mk">#</span> Release notes</span>
+
+This build is <span class="mk">**</span><span class="st">faster</span><span class="mk">**</span> and <span class="mk">*</span><span class="em">quieter</span><span class="mk">*</span>. See the <span class="mk">[</span><span class="ln">changelog</span><span class="mk">](</span><span class="ln">/changes</span><span class="mk">)</span>.
+
+<span class="mk">-</span> Run <span class="mk">\`</span><span class="ic">npm test</span><span class="mk">\`</span> before pushing
+<span class="mk">-</span> Big pastes no longer freeze the page
+
+<span class="mk">&gt;</span> <span class="qt">Nothing you paste leaves the browser.</span>`}
+  document.getElementById('mdNow').innerHTML=build();
+  document.getElementById('mdNew').innerHTML=build();
+})();
+
+/* 5: intro demo + collapse */
+(function(){
+  const intros=[...document.querySelectorAll('[data-intro]')];
+  const set=p=>intros.forEach(e=>e.classList.toggle('packed',p));
+  document.getElementById('simEmpty').onclick=e=>{set(false);e.target.classList.add('on');document.getElementById('simFull').classList.remove('on')};
+  document.getElementById('simFull').onclick=e=>{set(true);e.target.classList.add('on');document.getElementById('simEmpty').classList.remove('on')};
+  const inn=document.getElementById('demoIn'),out=document.getElementById('demoOut');
+  const src='{"user":"ada","tags":["a","b"]}';
+  const pretty='{\n  "user": "ada",\n  "tags": ["a", "b"]\n}';
+  const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(reduce){inn.textContent=src;out.textContent=pretty;return}
+  const caret='<span class="caret"></span>';
+  let i=0;
+  function type(){ if(i<=src.length){inn.innerHTML=src.slice(0,i).replace(/</g,'&lt;')+caret;out.textContent='';i++;setTimeout(type,35)} else {inn.textContent=src;out.textContent=pretty;setTimeout(()=>{i=0;type()},3200)} }
+  type();
+})();
+</script>
+</body>
+</html>

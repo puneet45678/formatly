@@ -31,13 +31,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <meta httpEquiv="Content-Security-Policy" content={CONTENT_SECURITY_POLICY} />
         )}
       </head>
-      <body className="flex h-dvh flex-col font-sans">
+      <body className="flex min-h-dvh flex-col font-sans">
         <KineticGrid />
         <TopBar />
-        <WorkbenchProvider>
-          {/* Scrolls under the top bar: a format page puts its tool at full height, with its guide below. */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
-        </WorkbenchProvider>
+        <WorkbenchProvider>{children}</WorkbenchProvider>
       </body>
     </html>
   );

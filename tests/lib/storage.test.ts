@@ -28,6 +28,7 @@ describe("storage", () => {
     expect(STORAGE_KEYS).toEqual({
       lastFormat: "formatly:lastFormat",
       railCollapsed: "formatly:railCollapsed",
+      layout: "formatly:layout",
     });
   });
 
