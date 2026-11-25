@@ -12,6 +12,10 @@ const SHORTCUTS = [
   { action: "Copy output", keys: "⌘/Ctrl + Shift + C" },
   { action: "Collapse or expand the format menu", keys: "⌘/Ctrl + \\" },
   { action: "Leave expanded output", keys: "Esc" },
+  // CodeMirror's fold keymap: Cmd+Option on Mac, Ctrl+Shift elsewhere; fold all is Ctrl+Alt on both.
+  { action: "Fold the block at the cursor", keys: "⌘⌥[ / Ctrl + Shift + [" },
+  { action: "Unfold the block at the cursor", keys: "⌘⌥] / Ctrl + Shift + ]" },
+  { action: "Fold or unfold everything", keys: "Ctrl + Alt + [ or ]" },
   // Tab indents inside the editor, so leaving it takes Esc first.
   { action: "Leave the editor", keys: "Esc, then Tab" },
 ];

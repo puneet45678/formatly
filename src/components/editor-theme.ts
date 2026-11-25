@@ -33,6 +33,21 @@ export const editorTheme = EditorView.theme(
     ".cm-selectionBackground, &.cm-focused .cm-selectionBackground": { backgroundColor: "#264f78 !important" },
     ".cm-placeholder": { color: "#5c5c5c" },
     ".cm-error-line": { backgroundColor: "rgba(248,113,113,.12)" },
+    // Fold chevrons, as in VS Code: shown while the pointer is over the gutter,
+    // always shown on a folded line so the collapsed block stays findable.
+    ".cm-foldGutter .cm-gutterElement": { padding: "0 4px", cursor: "pointer" },
+    ".cm-fold-marker": { display: "inline-block", color: "#6b7280", transition: "transform 120ms, opacity 120ms" },
+    ".cm-fold-open": { transform: "rotate(90deg)", opacity: "0" },
+    ".cm-gutters:hover .cm-fold-open": { opacity: "1" },
+    ".cm-fold-closed": { color: "#cfcfcf" },
+    ".cm-foldPlaceholder": {
+      backgroundColor: "#1c1c1c",
+      border: "1px solid #2e2e2e",
+      borderRadius: "4px",
+      color: "#9ca3af",
+      padding: "0 5px",
+      margin: "0 2px",
+    },
   },
   { dark: true },
 );
